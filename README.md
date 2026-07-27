@@ -346,6 +346,45 @@ npm run dev        # → http://localhost:4310
 Sliders for speed/opacity/size, color pickers, and a JSON editor for markers
 (with validation and presets). Rebuilds automatically on save.
 
+### Deploy to Cloudflare (Workers static assets)
+
+The playground is a static React SPA. It deploys as a Cloudflare Worker that
+serves the built assets.
+
+#### From your terminal
+
+```bash
+npm install
+npm run build:playground      # outputs to playground/dist
+npm run deploy:playground     # requires `wrangler login`
+```
+
+`wrangler.jsonc` at the repo root tells Wrangler to serve `./playground/dist`
+with `not_found_handling: single-page-application`, so any unknown route falls
+back to `index.html`. No Worker code is required for a pure static deployment.
+
+To preview locally before deploying:
+
+```bash
+npm run preview:playground
+```
+
+#### From the Cloudflare dashboard (Git integration)
+
+1. Ve a **Workers & Pages** → **Create application** → **Import a repository**.
+2. Conectá tu cuenta de GitHub y seleccioná `cmcuriqueo/react-land-globe`.
+3. Usá estos valores en **Build settings**:
+
+| Campo | Valor |
+| --- | --- |
+| **Git branch** | `feature/outline-labels-tooltips` (o la rama que quieras deployar) |
+| **Root directory** | *(vacío)* |
+| **Build command** | `npm run build:playground` |
+| **Deploy command** | `npx wrangler deploy` (default; lee `wrangler.jsonc`) |
+
+4. Guardá y deployá. Cloudflare va a instalar dependencias, correr el build y
+desplegar el Worker cada vez que hagas push a esa rama.
+
 ## Tests
 
 ```bash

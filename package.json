@@ -1,6 +1,6 @@
 {
   "name": "react-land-globe",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Globo terráqueo interactivo en canvas para React: continentes punteados, rotación automática, marcadores con glow y arrastre. Cero dependencias, SSR-safe.",
   "type": "module",
   "main": "./src/index.js",
@@ -20,6 +20,9 @@
   "sideEffects": false,
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
+    "build:playground": "node scripts/build-playground.mjs",
+    "preview:playground": "npm run build:playground && wrangler dev",
+    "deploy:playground": "npm run build:playground && wrangler deploy",
     "generate-land-data": "node scripts/generate-land-data.mjs",
     "test": "vitest run",
     "test:e2e": "node test/e2e/run.mjs",
@@ -50,6 +53,7 @@
     "jsdom": "^29.1.1",
     "playwright-core": "^1.62.0",
     "publint": "^0.3.22",
+    "wrangler": "^4.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "vitest": "^4.1.10"
