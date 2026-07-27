@@ -357,6 +357,28 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     expect(ctx.strokeStyles.some((s) => typeof s === "string" && s.includes("rgba(59, 130, 246,"))).toBe(true);
   });
 
+  it("pausa la rotación automática con pauseOnHover", async () => {
+    const ref = React.createRef();
+    const { container } = render(
+      <LandGlobe
+        ref={ref}
+        markers={[{ lat: 0, lon: 0, name: "Test" }]}
+        initialRotation={{ x: 0, y: 0 }}
+        autoRotateSpeed={0.05}
+        pauseOnHover
+      />,
+    );
+    const canvas = container.querySelector("canvas");
+    await waitFrames(120);
+    const before = ref.current.getRotation();
+
+    fireEvent.mouseEnter(canvas);
+    await waitFrames(120);
+    const after = ref.current.getRotation();
+
+    expect(Math.abs(after.y - before.y)).toBeLessThan(0.01);
+  });
+
   it("llama onMarkerHover al entrar y salir de un marcador", async () => {
     const onHover = vi.fn();
     const { container } = render(

@@ -117,6 +117,8 @@ Nothing special needed — import and render.
 | `markers` | `GlobeMarker[]` | 9 Latin American cities | Points to draw on the globe |
 | `size` | `number` | `520` | Max width of the container in px (the globe is always square) |
 | `autoRotateSpeed` | `number` | `0.0026` | Auto-rotation speed in radians per frame. `0` disables it |
+| `pauseOnHover` | `boolean` | `false` | Pause auto-rotation while the mouse is over the globe |
+| `pauseOnInvisible` | `boolean` | `false` | Pause auto-rotation when the globe is off-screen |
 | `dragSpeed` | `number` | `0.005` | Horizontal drag sensitivity |
 | `verticalDragSpeed` | `number` | `0.005` | Vertical drag sensitivity (rotates the globe up/down) |
 | `centerAnimationSpeed` | `number` | `0.08` | Interpolation speed when centering on a marker via ref |

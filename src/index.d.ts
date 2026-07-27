@@ -58,6 +58,10 @@ export interface LandGlobeProps {
   verticalDragSpeed?: number;
   /** Velocidad de interpolación al centrar un marcador vía ref. Default: 0.08. */
   centerAnimationSpeed?: number;
+  /** Pausa la rotación automática mientras el mouse está sobre el globo. Default: false. */
+  pauseOnHover?: boolean;
+  /** Pausa la rotación automática cuando el globo no es visible en el viewport. Default: false. */
+  pauseOnInvisible?: boolean;
   /** Habilita arrastre con mouse/touch. Default: true. */
   interactive?: boolean;
   /** Rotación inicial. Default: { x: 0.41, y: -0.9 } (centrado en América). */

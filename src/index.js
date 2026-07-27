@@ -77,6 +77,8 @@ const LandGlobe = React.forwardRef(function LandGlobe({
   dragSpeed = 0.005,
   verticalDragSpeed = 0.005,
   centerAnimationSpeed = 0.08,
+  pauseOnHover = false,
+  pauseOnInvisible = false,
   interactive = true,
   initialRotation = { x: 0.41, y: -0.9 },
   landStyle = "dots",
@@ -119,6 +121,8 @@ const LandGlobe = React.forwardRef(function LandGlobe({
   const wrapperRef = useRef(null);
   const tooltipRef = useRef(null);
   const isDragging = useRef(false);
+  const isHovering = useRef(false);
+  const isVisible = useRef(true);
   const previousMouse = useRef({ x: 0, y: 0 });
   const rotation = useRef({ x: initialRotation.x, y: initialRotation.y });
   const targetRotation = useRef(null);
@@ -141,6 +145,8 @@ const LandGlobe = React.forwardRef(function LandGlobe({
     autoRotateSpeed,
     verticalDragSpeed,
     centerAnimationSpeed,
+    pauseOnHover,
+    pauseOnInvisible,
     landStyle,
     dotColor,
     dotOpacity,
@@ -626,8 +632,13 @@ const LandGlobe = React.forwardRef(function LandGlobe({
 
     const handleMouseLeave = () => {
       isDragging.current = false;
+      isHovering.current = false;
       setHovered(null);
       canvas.style.cursor = config.current.interactive ? "grab" : "default";
+    };
+
+    const handleMouseEnter = () => {
+      isHovering.current = true;
     };
 
     const handleClick = (e) => {
@@ -655,11 +666,23 @@ const LandGlobe = React.forwardRef(function LandGlobe({
     canvas.addEventListener("mousemove", handleMouseMove);
     canvas.addEventListener("mouseup", handleMouseUp);
     canvas.addEventListener("mouseleave", handleMouseLeave);
+    canvas.addEventListener("mouseenter", handleMouseEnter);
     canvas.addEventListener("click", handleClick);
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     canvas.addEventListener("touchstart", handleMouseDown, { passive: true });
     canvas.addEventListener("touchmove", handleMouseMove, { passive: true });
     canvas.addEventListener("touchend", handleMouseUp);
+
+    let visibilityObserver = null;
+    if (config.current.pauseOnInvisible && typeof IntersectionObserver !== "undefined") {
+      visibilityObserver = new IntersectionObserver(
+        (entries) => {
+          isVisible.current = entries[0]?.isIntersecting ?? true;
+        },
+        { threshold: 0 },
+      );
+      visibilityObserver.observe(canvas);
+    }
 
     const render = () => {
       const cfg = config.current;
@@ -684,7 +707,11 @@ const LandGlobe = React.forwardRef(function LandGlobe({
           targetRotation.current = null;
         }
       } else if (!isDragging.current) {
-        rotation.current.y += cfg.autoRotateSpeed;
+        const hoverPaused = cfg.pauseOnHover && isHovering.current;
+        const invisiblePaused = cfg.pauseOnInvisible && !isVisible.current;
+        if (!hoverPaused && !invisiblePaused) {
+          rotation.current.y += cfg.autoRotateSpeed;
+        }
       }
 
       updateRadius();
@@ -832,11 +859,13 @@ const LandGlobe = React.forwardRef(function LandGlobe({
     return () => {
       cancelAnimationFrame(animId);
       observer?.disconnect();
+      visibilityObserver?.disconnect();
       clearTimeout(tooltipTimer.current);
       canvas.removeEventListener("mousedown", handleMouseDown);
       canvas.removeEventListener("mousemove", handleMouseMove);
       canvas.removeEventListener("mouseup", handleMouseUp);
       canvas.removeEventListener("mouseleave", handleMouseLeave);
+      canvas.removeEventListener("mouseenter", handleMouseEnter);
       canvas.removeEventListener("click", handleClick);
       canvas.removeEventListener("wheel", handleWheel);
       canvas.removeEventListener("touchstart", handleMouseDown);
