@@ -119,6 +119,8 @@ Nothing special needed — import and render.
 | `autoRotateSpeed` | `number` | `0.0026` | Auto-rotation speed in radians per frame. `0` disables it |
 | `pauseOnHover` | `boolean` | `false` | Pause auto-rotation while the mouse is over the globe |
 | `pauseOnInvisible` | `boolean` | `false` | Pause auto-rotation when the globe is off-screen |
+| `static` | `boolean` | `false` | Render a single static frame, no animation loop |
+| `targetFPS` | `number` | — | Cap the render loop FPS (e.g. `30`) |
 | `dragSpeed` | `number` | `0.005` | Horizontal drag sensitivity |
 | `verticalDragSpeed` | `number` | `0.005` | Vertical drag sensitivity (rotates the globe up/down) |
 | `centerAnimationSpeed` | `number` | `0.08` | Interpolation speed when centering on a marker via ref |

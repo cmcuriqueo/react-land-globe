@@ -62,6 +62,10 @@ export interface LandGlobeProps {
   pauseOnHover?: boolean;
   /** Pausa la rotación automática cuando el globo no es visible en el viewport. Default: false. */
   pauseOnInvisible?: boolean;
+  /** Si es true, no inicia el loop de animación; renderiza un solo frame estático. Default: false. */
+  static?: boolean;
+  /** Limita los frames por segundo del loop de animación. Default: sin límite. */
+  targetFPS?: number;
   /** Habilita arrastre con mouse/touch. Default: true. */
   interactive?: boolean;
   /** Rotación inicial. Default: { x: 0.41, y: -0.9 } (centrado en América). */

@@ -79,6 +79,8 @@ const LandGlobe = React.forwardRef(function LandGlobe({
   centerAnimationSpeed = 0.08,
   pauseOnHover = false,
   pauseOnInvisible = false,
+  static: staticMode = false,
+  targetFPS,
   interactive = true,
   initialRotation = { x: 0.41, y: -0.9 },
   landStyle = "dots",
@@ -147,6 +149,8 @@ const LandGlobe = React.forwardRef(function LandGlobe({
     centerAnimationSpeed,
     pauseOnHover,
     pauseOnInvisible,
+    static: staticMode,
+    targetFPS,
     landStyle,
     dotColor,
     dotOpacity,
@@ -269,6 +273,8 @@ const LandGlobe = React.forwardRef(function LandGlobe({
       project(lat, lon, rotX, rotY, radius, centerX, centerY);
 
     let animId;
+    let timeoutId;
+    let lastFrameTime = performance.now();
 
     const drawOutlines = (rotX, rotY) => {
       const cfg = config.current;
@@ -851,13 +857,33 @@ const LandGlobe = React.forwardRef(function LandGlobe({
 
       updateTooltipPosition();
 
-      animId = requestAnimationFrame(render);
+      schedule();
+    };
+
+    const schedule = () => {
+      const cfg = config.current;
+      if (cfg.static) return;
+
+      if (cfg.targetFPS && cfg.targetFPS > 0) {
+        const interval = 1000 / cfg.targetFPS;
+        const elapsed = performance.now() - lastFrameTime;
+        const delay = Math.max(0, interval - elapsed);
+        timeoutId = setTimeout(() => {
+          animId = requestAnimationFrame((t) => {
+            lastFrameTime = t;
+            render();
+          });
+        }, delay);
+      } else {
+        animId = requestAnimationFrame(render);
+      }
     };
 
     render();
 
     return () => {
       cancelAnimationFrame(animId);
+      clearTimeout(timeoutId);
       observer?.disconnect();
       visibilityObserver?.disconnect();
       clearTimeout(tooltipTimer.current);

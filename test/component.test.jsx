@@ -379,6 +379,14 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     expect(Math.abs(after.y - before.y)).toBeLessThan(0.01);
   });
 
+  it("con static={true} no anima más frames después del render inicial", async () => {
+    render(<LandGlobe static markers={[{ lat: 0, lon: 0, name: "Test" }]} />);
+    await waitFrames(120);
+    const frames = ctx.clearRect.mock.calls.length;
+    await waitFrames(120);
+    expect(ctx.clearRect.mock.calls.length).toBe(frames);
+  });
+
   it("llama onMarkerHover al entrar y salir de un marcador", async () => {
     const onHover = vi.fn();
     const { container } = render(

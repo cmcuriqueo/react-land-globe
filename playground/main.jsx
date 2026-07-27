@@ -66,6 +66,8 @@ function Playground() {
   const [showConnections, setShowConnections] = useState(false);
   const [pauseOnHover, setPauseOnHover] = useState(false);
   const [pauseOnInvisible, setPauseOnInvisible] = useState(false);
+  const [staticMode, setStaticMode] = useState(false);
+  const [targetFPS, setTargetFPS] = useState(0);
   const [landStyle, setLandStyle] = useState("dots");
   const [outlineOpacity, setOutlineOpacity] = useState(0.75);
   const [fillOpacity, setFillOpacity] = useState(0.15);
@@ -125,6 +127,8 @@ function Playground() {
           connections={showConnections ? DEMO_CONNECTIONS : []}
           pauseOnHover={pauseOnHover}
           pauseOnInvisible={pauseOnInvisible}
+          static={staticMode}
+          targetFPS={targetFPS || undefined}
           zoom={zoom}
           minZoom={0.5}
           maxZoom={2.5}
@@ -230,6 +234,21 @@ function Playground() {
           <input
             type="checkbox" checked={pauseOnInvisible}
             onChange={(e) => setPauseOnInvisible(e.target.checked)}
+          />
+        </Control>
+
+        <Control label="static" value={staticMode ? "on" : "off"}>
+          <input
+            type="checkbox" checked={staticMode}
+            onChange={(e) => setStaticMode(e.target.checked)}
+          />
+        </Control>
+
+        <Control label="targetFPS" value={targetFPS > 0 ? targetFPS : "unlimited"}>
+          <input
+            type="range" min="0" max="60" step="5" value={targetFPS}
+            onChange={(e) => setTargetFPS(Number(e.target.value))}
+            style={{ width: "100%" }}
           />
         </Control>
 
