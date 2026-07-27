@@ -378,16 +378,18 @@ export default function LandGlobe({
             const endAngle = Math.atan2(first.y - centerY, first.x - centerX);
 
             // Elegimos el arco probando cuál forma un polígono que contiene
-            // a un punto interior del cap visible.
+            // a un punto interior del cap visible. Tomamos el punto visible
+            // más alejado del centro (cerca del borde) y lo movemos un poco
+            // hacia adentro, así solo el arco correcto lo contiene.
             let interior = null;
-            let minDist = Infinity;
+            let maxDist = -Infinity;
             for (const pt of pts) {
               if (!pt.cut) {
                 const dx = pt.x - centerX;
                 const dy = pt.y - centerY;
                 const dist = dx * dx + dy * dy;
-                if (dist < minDist) {
-                  minDist = dist;
+                if (dist > maxDist) {
+                  maxDist = dist;
                   interior = pt;
                 }
               }
@@ -396,8 +398,8 @@ export default function LandGlobe({
             let useCcw;
             if (interior) {
               const testPoint = {
-                x: interior.x * 0.7 + centerX * 0.3,
-                y: interior.y * 0.7 + centerY * 0.3,
+                x: interior.x * 0.92 + centerX * 0.08,
+                y: interior.y * 0.92 + centerY * 0.08,
               };
               const ccwPoly = [...pts, ...arcPolygon(startAngle, endAngle, true, 12)];
               const cwPoly = [...pts, ...arcPolygon(startAngle, endAngle, false, 12)];
