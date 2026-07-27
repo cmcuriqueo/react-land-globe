@@ -55,6 +55,7 @@ function Playground() {
   const [interactive, setInteractive] = useState(true);
   const [dotColor, setDotColor] = useState("#ffffff");
   const [markerColor, setMarkerColor] = useState("#dc2626");
+  const [markerPulse, setMarkerPulse] = useState(false);
   const [landStyle, setLandStyle] = useState("dots");
   const [outlineOpacity, setOutlineOpacity] = useState(0.75);
   const [fillOpacity, setFillOpacity] = useState(0.15);
@@ -108,6 +109,7 @@ function Playground() {
           interactive={interactive}
           dotColor={hexToRgb(dotColor)}
           markerColor={hexToRgb(markerColor)}
+          markerPulse={markerPulse}
           landStyle={landStyle}
           outlineOpacity={outlineOpacity}
           fillOpacity={fillOpacity}
@@ -182,6 +184,13 @@ function Playground() {
             type="range" min="0" max="1" step="0.05" value={fillOpacity}
             onChange={(e) => setFillOpacity(Number(e.target.value))}
             style={{ width: "100%" }}
+          />
+        </Control>
+
+        <Control label="markerPulse" value={markerPulse ? "on" : "off"}>
+          <input
+            type="checkbox" checked={markerPulse}
+            onChange={(e) => setMarkerPulse(e.target.checked)}
           />
         </Control>
 

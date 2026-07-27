@@ -88,6 +88,7 @@ export default function LandGlobe({
   markerColor = "220, 38, 38",
   markerGlowColor = "239, 68, 68",
   markerCoreColor = "255, 255, 255",
+  markerPulse = false,
   backgroundStops = DEFAULT_BACKGROUND,
   showAtmosphere = true,
   maxPixelRatio,
@@ -132,6 +133,7 @@ export default function LandGlobe({
     markerColor,
     markerGlowColor,
     markerCoreColor,
+    markerPulse,
     backgroundStops,
     showAtmosphere,
     showLabels,
@@ -585,6 +587,8 @@ export default function LandGlobe({
         rotation.current.y += cfg.autoRotateSpeed;
       }
 
+      const pulsePhase = cfg.markerPulse ? (Date.now() / 1500) % 1 : 0;
+
       // Atmósfera
       if (cfg.showAtmosphere) {
         const atm = ctx.createRadialGradient(
@@ -658,6 +662,16 @@ export default function LandGlobe({
           ctx.arc(p.x, p.y, 1.85, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(${cfg.markerCoreColor}, ${depth})`;
           ctx.fill();
+
+          if (cfg.markerPulse) {
+            const pulseRadius = markerSize + pulsePhase * 16;
+            const pulseAlpha = (1 - pulsePhase) * 0.5;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, pulseRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(${glow}, ${pulseAlpha * depth})`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
 
           if (cfg.showLabels) {
             visibleMarkers.push({ m, p, depth });

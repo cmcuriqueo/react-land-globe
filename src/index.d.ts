@@ -67,6 +67,8 @@ export interface LandGlobeProps {
   markerGlowColor?: string;
   /** Color del punto central de los marcadores, triplete RGB. Default: "255, 255, 255". */
   markerCoreColor?: string;
+  /** Activa un anillo pulsante alrededor de cada marcador. Default: false. */
+  markerPulse?: boolean;
   /** Stops del gradiente radial de fondo: [posición 0-1, color CSS]. */
   backgroundStops?: Array<[number, string]>;
   /** Dibuja el halo de atmósfera alrededor del globo. Default: true. */

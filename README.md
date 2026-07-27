@@ -115,6 +115,7 @@ Nothing special needed — import and render.
 | `markerColor` | `string` | `"220, 38, 38"` | Marker color as an `"r, g, b"` triplet |
 | `markerGlowColor` | `string` | `"239, 68, 68"` | Marker glow color |
 | `markerCoreColor` | `string` | `"255, 255, 255"` | Marker center dot color |
+| `markerPulse` | `boolean` | `false` | Animated pulse ring around each marker |
 | `backgroundStops` | `[number, string][]` | grey → black gradient | Radial gradient stops: `[position 0-1, CSS color]` |
 | `showAtmosphere` | `boolean` | `true` | Draw the atmosphere halo around the globe |
 | `maxPixelRatio` | `number` | — | Cap `devicePixelRatio` to save GPU |

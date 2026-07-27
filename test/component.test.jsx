@@ -262,6 +262,31 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     expect(dotArcs.length).toBe(0);
   });
 
+  it("dibuja anillos de pulso cuando markerPulse=true", async () => {
+    const { rerender } = render(
+      <LandGlobe
+        markers={[{ lat: 0, lon: 0, name: "Test" }]}
+        initialRotation={{ x: 0, y: Math.PI / 2 }}
+        landStyle="dots"
+      />,
+    );
+    await waitFrames();
+    const strokesWithoutPulse = ctx.stroke.mock.calls.length;
+
+    rerender(
+      <LandGlobe
+        markers={[{ lat: 0, lon: 0, name: "Test" }]}
+        initialRotation={{ x: 0, y: Math.PI / 2 }}
+        landStyle="dots"
+        markerPulse
+      />,
+    );
+    await waitFrames();
+    const strokesWithPulse = ctx.stroke.mock.calls.length;
+
+    expect(strokesWithPulse).toBeGreaterThan(strokesWithoutPulse);
+  });
+
   it("llama onMarkerHover al entrar y salir de un marcador", async () => {
     const onHover = vi.fn();
     const { container } = render(
