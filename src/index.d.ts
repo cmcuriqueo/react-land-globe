@@ -39,8 +39,10 @@ export interface LandGlobeProps {
   size?: number;
   /** Velocidad de rotación automática en radianes por frame. Default: 0.0026. */
   autoRotateSpeed?: number;
-  /** Sensibilidad del arrastre. Default: 0.005. */
+  /** Sensibilidad del arrastre horizontal. Default: 0.005. */
   dragSpeed?: number;
+  /** Sensibilidad del arrastre vertical (rotación en X). Default: 0.005. */
+  verticalDragSpeed?: number;
   /** Habilita arrastre con mouse/touch. Default: true. */
   interactive?: boolean;
   /** Rotación inicial. Default: { x: 0.41, y: -0.9 } (centrado en América). */

@@ -262,6 +262,19 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     expect(dotArcs.length).toBe(0);
   });
 
+  it("permite arrastre vertical sin errores", async () => {
+    const { container } = render(<LandGlobe verticalDragSpeed={0.01} />);
+    const canvas = container.querySelector("canvas");
+    await waitFrames();
+
+    fireEvent.mouseDown(canvas, { clientX: 250, clientY: 250 });
+    fireEvent.mouseMove(canvas, { clientX: 250, clientY: 150 });
+    await waitFrames();
+    fireEvent.mouseUp(canvas);
+
+    expect(canvas).toBeTruthy();
+  });
+
   it("llama onZoomChange al hacer zoom con la rueda", async () => {
     const onZoomChange = vi.fn();
     const { container } = render(

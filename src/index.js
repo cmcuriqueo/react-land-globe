@@ -75,6 +75,7 @@ export default function LandGlobe({
   size = 520,
   autoRotateSpeed = 0.0026,
   dragSpeed = 0.005,
+  verticalDragSpeed = 0.005,
   interactive = true,
   initialRotation = { x: 0.41, y: -0.9 },
   landStyle = "dots",
@@ -131,6 +132,7 @@ export default function LandGlobe({
   config.current = {
     markers,
     autoRotateSpeed,
+    verticalDragSpeed,
     landStyle,
     dotColor,
     dotOpacity,
@@ -556,6 +558,8 @@ export default function LandGlobe({
 
       if (isDragging.current && cfg.interactive) {
         rotation.current.y += (clientX - previousMouse.current.clientX) * dragSpeed;
+        rotation.current.x += (clientY - previousMouse.current.clientY) * cfg.verticalDragSpeed;
+        rotation.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotation.current.x));
         previousMouse.current = { clientX, clientY };
         return;
       }

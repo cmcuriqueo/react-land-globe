@@ -101,7 +101,8 @@ Nothing special needed — import and render.
 | `markers` | `GlobeMarker[]` | 9 Latin American cities | Points to draw on the globe |
 | `size` | `number` | `520` | Max width of the container in px (the globe is always square) |
 | `autoRotateSpeed` | `number` | `0.0026` | Auto-rotation speed in radians per frame. `0` disables it |
-| `dragSpeed` | `number` | `0.005` | Drag sensitivity |
+| `dragSpeed` | `number` | `0.005` | Horizontal drag sensitivity |
+| `verticalDragSpeed` | `number` | `0.005` | Vertical drag sensitivity (rotates the globe up/down) |
 | `interactive` | `boolean` | `true` | Enable mouse/touch drag |
 | `initialRotation` | `{ x, y }` | `{ x: 0.41, y: -0.9 }` | Initial rotation (the default centers the Americas) |
 | `landStyle` | `"dots" \| "outline" \| "dots+outline" \| "fill"` | `"dots"` | Continent rendering style |
