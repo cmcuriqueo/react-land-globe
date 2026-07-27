@@ -69,6 +69,14 @@ export interface LandGlobeProps {
   markerCoreColor?: string;
   /** Activa un anillo pulsante alrededor de cada marcador. Default: false. */
   markerPulse?: boolean;
+  /** Zoom inicial del globo. Default: 1. */
+  zoom?: number;
+  /** Zoom mínimo permitido. Default: 0.5. */
+  minZoom?: number;
+  /** Zoom máximo permitido. Default: 2.5. */
+  maxZoom?: number;
+  /** Callback al cambiar el zoom con la rueda del mouse. */
+  onZoomChange?: (zoom: number) => void;
   /** Stops del gradiente radial de fondo: [posición 0-1, color CSS]. */
   backgroundStops?: Array<[number, string]>;
   /** Dibuja el halo de atmósfera alrededor del globo. Default: true. */

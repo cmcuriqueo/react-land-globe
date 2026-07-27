@@ -116,6 +116,10 @@ Nothing special needed — import and render.
 | `markerGlowColor` | `string` | `"239, 68, 68"` | Marker glow color |
 | `markerCoreColor` | `string` | `"255, 255, 255"` | Marker center dot color |
 | `markerPulse` | `boolean` | `false` | Animated pulse ring around each marker |
+| `zoom` | `number` | `1` | Initial zoom level |
+| `minZoom` | `number` | `0.5` | Minimum zoom level |
+| `maxZoom` | `number` | `2.5` | Maximum zoom level |
+| `onZoomChange` | `(zoom) => void` | — | Called when the user zooms with the mouse wheel |
 | `backgroundStops` | `[number, string][]` | grey → black gradient | Radial gradient stops: `[position 0-1, CSS color]` |
 | `showAtmosphere` | `boolean` | `true` | Draw the atmosphere halo around the globe |
 | `maxPixelRatio` | `number` | — | Cap `devicePixelRatio` to save GPU |

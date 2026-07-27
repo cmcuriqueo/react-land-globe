@@ -59,6 +59,7 @@ function Playground() {
   const [landStyle, setLandStyle] = useState("dots");
   const [outlineOpacity, setOutlineOpacity] = useState(0.75);
   const [fillOpacity, setFillOpacity] = useState(0.15);
+  const [zoom, setZoom] = useState(1);
   const [showLabels, setShowLabels] = useState(false);
   const [labelPosition, setLabelPosition] = useState("top");
   const [showTooltip, setShowTooltip] = useState(false);
@@ -110,6 +111,10 @@ function Playground() {
           dotColor={hexToRgb(dotColor)}
           markerColor={hexToRgb(markerColor)}
           markerPulse={markerPulse}
+          zoom={zoom}
+          minZoom={0.5}
+          maxZoom={2.5}
+          onZoomChange={setZoom}
           landStyle={landStyle}
           outlineOpacity={outlineOpacity}
           fillOpacity={fillOpacity}
@@ -191,6 +196,14 @@ function Playground() {
           <input
             type="checkbox" checked={markerPulse}
             onChange={(e) => setMarkerPulse(e.target.checked)}
+          />
+        </Control>
+
+        <Control label="zoom" value={zoom.toFixed(2)}>
+          <input
+            type="range" min="0.5" max="2.5" step="0.1" value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            style={{ width: "100%" }}
           />
         </Control>
 

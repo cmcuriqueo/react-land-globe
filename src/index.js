@@ -89,6 +89,10 @@ export default function LandGlobe({
   markerGlowColor = "239, 68, 68",
   markerCoreColor = "255, 255, 255",
   markerPulse = false,
+  zoom = 1,
+  minZoom = 0.5,
+  maxZoom = 2.5,
+  onZoomChange,
   backgroundStops = DEFAULT_BACKGROUND,
   showAtmosphere = true,
   maxPixelRatio,
@@ -110,8 +114,13 @@ export default function LandGlobe({
   const isDragging = useRef(false);
   const previousMouse = useRef({ x: 0, y: 0 });
   const rotation = useRef({ x: initialRotation.x, y: initialRotation.y });
+  const zoomRef = useRef(zoom);
   const hoveredHit = useRef(null);
   const tooltipTimer = useRef(null);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   const [hoveredMarker, setHoveredMarker] = useState(null);
   const [tooltipVisible, setTooltipVisible] = useState(false);
@@ -134,6 +143,10 @@ export default function LandGlobe({
     markerGlowColor,
     markerCoreColor,
     markerPulse,
+    zoom,
+    minZoom,
+    maxZoom,
+    onZoomChange,
     backgroundStops,
     showAtmosphere,
     showLabels,
@@ -159,6 +172,10 @@ export default function LandGlobe({
     let centerY = 0;
     let radius = 0;
 
+    const updateRadius = () => {
+      radius = Math.min(width, height) * 0.42 * zoomRef.current;
+    };
+
     const setup = () => {
       const dprRaw = window.devicePixelRatio || 1;
       const dpr = maxPixelRatio ? Math.min(dprRaw, maxPixelRatio) : dprRaw;
@@ -169,7 +186,7 @@ export default function LandGlobe({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       centerX = width / 2;
       centerY = height / 2;
-      radius = Math.min(width, height) * 0.42;
+      updateRadius();
     };
 
     setup();
@@ -570,11 +587,25 @@ export default function LandGlobe({
       if (hit) cfg.onMarkerClick(hit.marker);
     };
 
+    const handleWheel = (e) => {
+      const cfg = config.current;
+      if (!cfg.interactive) return;
+      e.preventDefault();
+      const zoomSpeed = 0.001;
+      const newZoom = Math.min(
+        cfg.maxZoom,
+        Math.max(cfg.minZoom, zoomRef.current - e.deltaY * zoomSpeed),
+      );
+      zoomRef.current = newZoom;
+      if (cfg.onZoomChange) cfg.onZoomChange(newZoom);
+    };
+
     canvas.addEventListener("mousedown", handleMouseDown);
     canvas.addEventListener("mousemove", handleMouseMove);
     canvas.addEventListener("mouseup", handleMouseUp);
     canvas.addEventListener("mouseleave", handleMouseLeave);
     canvas.addEventListener("click", handleClick);
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
     canvas.addEventListener("touchstart", handleMouseDown, { passive: true });
     canvas.addEventListener("touchmove", handleMouseMove, { passive: true });
     canvas.addEventListener("touchend", handleMouseUp);
@@ -586,6 +617,8 @@ export default function LandGlobe({
       if (!isDragging.current) {
         rotation.current.y += cfg.autoRotateSpeed;
       }
+
+      updateRadius();
 
       const pulsePhase = cfg.markerPulse ? (Date.now() / 1500) % 1 : 0;
 
@@ -733,6 +766,7 @@ export default function LandGlobe({
       canvas.removeEventListener("mouseup", handleMouseUp);
       canvas.removeEventListener("mouseleave", handleMouseLeave);
       canvas.removeEventListener("click", handleClick);
+      canvas.removeEventListener("wheel", handleWheel);
       canvas.removeEventListener("touchstart", handleMouseDown);
       canvas.removeEventListener("touchmove", handleMouseMove);
       canvas.removeEventListener("touchend", handleMouseUp);

@@ -262,6 +262,23 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     expect(dotArcs.length).toBe(0);
   });
 
+  it("llama onZoomChange al hacer zoom con la rueda", async () => {
+    const onZoomChange = vi.fn();
+    const { container } = render(
+      <LandGlobe
+        markers={[{ lat: 0, lon: 0, name: "Test" }]}
+        initialRotation={{ x: 0, y: Math.PI / 2 }}
+        onZoomChange={onZoomChange}
+      />,
+    );
+    const canvas = container.querySelector("canvas");
+    await waitFrames();
+
+    fireEvent.wheel(canvas, { deltaY: -100 });
+    expect(onZoomChange).toHaveBeenCalled();
+    expect(onZoomChange.mock.calls[0][0]).toBeGreaterThan(1);
+  });
+
   it("dibuja anillos de pulso cuando markerPulse=true", async () => {
     const { rerender } = render(
       <LandGlobe
