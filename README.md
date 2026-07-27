@@ -79,6 +79,18 @@ import LandGlobe from "react-land-globe";
 > Los colores se pasan como triplete RGB (`"220, 38, 38"`) porque el componente
 > los combina con distintos niveles de opacidad según la profundidad del punto.
 
+## Desarrollo
+
+```bash
+npm install
+npm run dev      # playground en http://localhost:4310
+npm test         # smoke test (SSR + datos de tierra)
+```
+
+El playground (`playground/`) levanta el componente con un panel de controles
+para probar todos los props en vivo: marcadores en JSON, velocidad de
+rotación, colores, tamaño y arrastre. Rebuild automático al guardar.
+
 ## Regenerar los puntos de tierra
 
 Los puntos salen de `data/land-110m.json` (TopoJSON de Natural Earth 110m). Si
