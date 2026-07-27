@@ -122,9 +122,8 @@ Nothing special needed — import and render.
 | `static` | `boolean` | `false` | Render a single static frame, no animation loop |
 | `targetFPS` | `number` | — | Cap the render loop FPS (e.g. `30`) |
 | `dragSpeed` | `number` | `0.005` | Horizontal drag sensitivity |
-| `verticalDragSpeed` | `number` | `0.005` | Vertical drag sensitivity (rotates the globe up/down) |
 | `centerAnimationSpeed` | `number` | `0.08` | Interpolation speed when centering on a marker via ref |
-| `interactive` | `boolean` | `true` | Enable mouse/touch drag |
+| `interactive` | `boolean` | `true` | Enable mouse/touch drag. Only rotates horizontally; use `initialRotation` or the ref to control the vertical tilt |
 | `initialRotation` | `{ x, y }` | `{ x: 0.41, y: -0.9 }` | Initial rotation (the default centers the Americas) |
 | `landStyle` | `"dots" \| "outline" \| "dots+outline" \| "fill"` | `"dots"` | Continent rendering style |
 | `dotColor` | `string` | `"255, 255, 255"` | Land dot color as an `"r, g, b"` triplet |

@@ -263,17 +263,20 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     expect(dotArcs.length).toBe(0);
   });
 
-  it("permite arrastre vertical sin errores", async () => {
-    const { container } = render(<LandGlobe verticalDragSpeed={0.01} />);
+  it("el arrastre vertical no cambia la inclinación (solo horizontal)", async () => {
+    const ref = React.createRef();
+    const { container } = render(<LandGlobe ref={ref} initialRotation={{ x: 0.41, y: 0 }} />);
     const canvas = container.querySelector("canvas");
     await waitFrames();
 
+    const before = ref.current.getRotation();
     fireEvent.mouseDown(canvas, { clientX: 250, clientY: 250 });
     fireEvent.mouseMove(canvas, { clientX: 250, clientY: 150 });
     await waitFrames();
     fireEvent.mouseUp(canvas);
+    const after = ref.current.getRotation();
 
-    expect(canvas).toBeTruthy();
+    expect(after.x).toBe(before.x);
   });
 
   it("llama onRotationChange durante el arrastre con ángulos normalizados", async () => {
@@ -295,8 +298,7 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
 
     expect(onRotationChange).toHaveBeenCalled();
     const rotation = onRotationChange.mock.calls[0][0];
-    expect(rotation.x).toBeGreaterThan(0);
-    expect(rotation.x).toBeLessThanOrEqual(Math.PI / 2);
+    expect(rotation.x).toBe(0);
     expect(rotation.y).toBeGreaterThan(0);
     expect(rotation.y).toBeLessThan(Math.PI * 2);
   });

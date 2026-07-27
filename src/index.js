@@ -75,7 +75,6 @@ const LandGlobe = React.forwardRef(function LandGlobe({
   size = 520,
   autoRotateSpeed = 0.0026,
   dragSpeed = 0.005,
-  verticalDragSpeed = 0.005,
   centerAnimationSpeed = 0.08,
   pauseOnHover = false,
   pauseOnInvisible = false,
@@ -152,7 +151,6 @@ const LandGlobe = React.forwardRef(function LandGlobe({
   config.current = {
     markers,
     autoRotateSpeed,
-    verticalDragSpeed,
     centerAnimationSpeed,
     pauseOnHover,
     pauseOnInvisible,
@@ -622,8 +620,6 @@ const LandGlobe = React.forwardRef(function LandGlobe({
 
       if (isDragging.current && cfg.interactive) {
         rotation.current.y += (clientX - previousMouse.current.clientX) * dragSpeed;
-        rotation.current.x += (clientY - previousMouse.current.clientY) * cfg.verticalDragSpeed;
-        rotation.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotation.current.x));
         if (cfg.onRotationChange) {
           cfg.onRotationChange(normalizeRotation(rotation.current));
         }

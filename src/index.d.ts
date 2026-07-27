@@ -54,8 +54,6 @@ export interface LandGlobeProps {
   autoRotateSpeed?: number;
   /** Sensibilidad del arrastre horizontal. Default: 0.005. */
   dragSpeed?: number;
-  /** Sensibilidad del arrastre vertical (rotación en X). Default: 0.005. */
-  verticalDragSpeed?: number;
   /** Velocidad de interpolación al centrar un marcador vía ref. Default: 0.08. */
   centerAnimationSpeed?: number;
   /** Pausa la rotación automática mientras el mouse está sobre el globo. Default: false. */
