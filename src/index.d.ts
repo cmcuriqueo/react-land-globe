@@ -71,8 +71,8 @@ export interface LandGlobeProps {
   maxPixelRatio?: number;
   /** Muestra el nombre de cada marcador junto al punto. Default: false. */
   showLabels?: boolean;
-  /** Posición del label respecto al marcador. Default: "top". */
-  labelPosition?: "top" | "right" | "bottom" | "left";
+  /** Posición del label respecto al marcador. Default: "top". Use "auto" para que elija automáticamente la posición sin colisiones. */
+  labelPosition?: "top" | "right" | "bottom" | "left" | "auto";
   /** Separación entre el marcador y el label en px. Default: 10. */
   labelOffset?: number;
   /** Estilo de los labels dibujados en canvas. */

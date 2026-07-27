@@ -271,4 +271,41 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     fireEvent.mouseMove(canvas, { clientX: 50, clientY: 50 });
     expect(onHover).toHaveBeenLastCalledWith(null);
   });
+
+  it("oculta labels que colisionan para evitar solapamientos", async () => {
+    render(
+      <LandGlobe
+        markers={[
+          { lat: 0, lon: 0, name: "A" },
+          { lat: 0, lon: 1, name: "B" },
+        ]}
+        initialRotation={{ x: 0, y: Math.PI / 2 }}
+        showLabels
+      />,
+    );
+    await waitFrames();
+
+    const drawnTexts = new Set(ctx.fillText.mock.calls.map((c) => c[0]));
+    expect(drawnTexts.has("A") || drawnTexts.has("B")).toBe(true);
+    expect(drawnTexts.has("A") && drawnTexts.has("B")).toBe(false);
+  });
+
+  it("con labelPosition='auto' elige lados alternativos para evitar colisiones", async () => {
+    render(
+      <LandGlobe
+        markers={[
+          { lat: 0, lon: 0, name: "A" },
+          { lat: 0, lon: 1, name: "B" },
+        ]}
+        initialRotation={{ x: 0, y: Math.PI / 2 }}
+        showLabels
+        labelPosition="auto"
+      />,
+    );
+    await waitFrames();
+
+    const drawnTexts = new Set(ctx.fillText.mock.calls.map((c) => c[0]));
+    expect(drawnTexts.has("A")).toBe(true);
+    expect(drawnTexts.has("B")).toBe(true);
+  });
 });

@@ -52,6 +52,18 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 /**
+ * Detecta solapamiento entre dos bounding boxes alineados a los ejes (AABB).
+ */
+function boxesOverlap(a, b) {
+  return (
+    a.left < b.right &&
+    a.right > b.left &&
+    a.top < b.bottom &&
+    a.bottom > b.top
+  );
+}
+
+/**
  * Globo interactivo en canvas: continentes punteados o contornos, rotación
  * automática, marcadores con glow, labels, tooltips y arrastre horizontal.
  *
@@ -195,14 +207,14 @@ export default function LandGlobe({
       }
     };
 
-    const drawLabel = (m, p, depth) => {
+    const computeLabelLayout = (m, p, depth, position) => {
       const cfg = config.current;
       const ls = cfg.labelStyle;
       const fontSize = ls.fontSize ?? DEFAULT_LABEL_STYLE.fontSize;
       const fontFamily = ls.fontFamily ?? DEFAULT_LABEL_STYLE.fontFamily;
       const fontWeight = ls.fontWeight ?? DEFAULT_LABEL_STYLE.fontWeight;
       const text = cfg.labelFormatter(m);
-      if (!text) return;
+      if (!text) return null;
 
       ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
       const metrics = ctx.measureText(text);
@@ -216,7 +228,7 @@ export default function LandGlobe({
 
       let lx = p.x;
       let ly = p.y;
-      switch (cfg.labelPosition) {
+      switch (position) {
         case "top":
           ly -= offset + bgH / 2;
           break;
@@ -232,6 +244,17 @@ export default function LandGlobe({
         default:
           ly -= offset + bgH / 2;
       }
+
+      return { text, lx, ly, bgW, bgH, r };
+    };
+
+    const drawLabel = (m, p, depth, position) => {
+      const layout = computeLabelLayout(m, p, depth, position);
+      if (!layout) return;
+
+      const { text, lx, ly, bgW, bgH, r } = layout;
+      const cfg = config.current;
+      const ls = cfg.labelStyle;
 
       roundRect(ctx, lx - bgW / 2, ly - bgH / 2, bgW, bgH, r);
       ctx.fillStyle = `rgba(${ls.backgroundColor}, ${depth * 0.85})`;
@@ -427,6 +450,7 @@ export default function LandGlobe({
       }
 
       // Marcadores
+      const visibleMarkers = [];
       for (const m of cfg.markers) {
         const p = projectAt(m.lat, m.lon, rotation.current.x, rotation.current.y);
         if (p.z > -radius * 0.12) {
@@ -450,7 +474,45 @@ export default function LandGlobe({
           ctx.fill();
 
           if (cfg.showLabels) {
-            drawLabel(m, p, depth);
+            visibleMarkers.push({ m, p, depth });
+          }
+        }
+      }
+
+      // Labels con anti-colisión AABB: los marcadores más al frente ganan.
+      if (visibleMarkers.length > 0) {
+        visibleMarkers.sort((a, b) => b.depth - a.depth);
+
+        const acceptedBoxes = [];
+        const positions =
+          cfg.labelPosition === "auto"
+            ? ["top", "right", "bottom", "left"]
+            : [cfg.labelPosition];
+
+        for (const { m, p, depth } of visibleMarkers) {
+          let chosen = null;
+
+          for (const pos of positions) {
+            const layout = computeLabelLayout(m, p, depth, pos);
+            if (!layout) continue;
+
+            const box = {
+              left: layout.lx - layout.bgW / 2,
+              right: layout.lx + layout.bgW / 2,
+              top: layout.ly - layout.bgH / 2,
+              bottom: layout.ly + layout.bgH / 2,
+            };
+
+            const collides = acceptedBoxes.some((b) => boxesOverlap(box, b));
+            if (!collides) {
+              chosen = { layout, position: pos, box };
+              break;
+            }
+          }
+
+          if (chosen) {
+            drawLabel(m, p, depth, chosen.position);
+            acceptedBoxes.push(chosen.box);
           }
         }
       }

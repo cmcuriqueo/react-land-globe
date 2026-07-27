@@ -117,7 +117,7 @@ Nothing special needed — import and render.
 | `showAtmosphere` | `boolean` | `true` | Draw the atmosphere halo around the globe |
 | `maxPixelRatio` | `number` | — | Cap `devicePixelRatio` to save GPU |
 | `showLabels` | `boolean` | `false` | Draw marker names next to each marker |
-| `labelPosition` | `"top" \| "right" \| "bottom" \| "left"` | `"top"` | Label position relative to the marker |
+| `labelPosition` | `"top" \| "right" \| "bottom" \| "left" \| "auto"` | `"top"` | Label position relative to the marker. `"auto"` picks the first non-colliding side. |
 | `labelOffset` | `number` | `10` | Distance between marker and label (px) |
 | `labelStyle` | `LabelStyle` | — | Font, color, background and padding for canvas labels |
 | `labelFormatter` | `(marker) => string` | `m => m.name` | Text shown in the label |
