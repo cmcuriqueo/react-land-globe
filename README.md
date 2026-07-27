@@ -60,6 +60,22 @@ With labels and a custom tooltip:
 />
 ```
 
+With great-circle connections between cities:
+
+```jsx
+<LandGlobe
+  markers={[
+    { lat: 40.71, lon: -74.0, name: "New York" },
+    { lat: 48.85, lon: 2.35, name: "Paris" },
+    { lat: -34.6, lon: -58.38, name: "Buenos Aires" },
+  ]}
+  connections={[
+    { from: { lat: 40.71, lon: -74.0 }, to: { lat: 48.85, lon: 2.35 }, color: "59, 130, 246" },
+    { from: { lat: 48.85, lon: 2.35 }, to: { lat: -34.6, lon: -58.38 }, color: "239, 68, 68" },
+  ]}
+/>
+```
+
 ## Framework guides
 
 ### Next.js (App Router)
@@ -118,6 +134,10 @@ Nothing special needed — import and render.
 | `markerGlowColor` | `string` | `"239, 68, 68"` | Marker glow color |
 | `markerCoreColor` | `string` | `"255, 255, 255"` | Marker center dot color |
 | `markerPulse` | `boolean` | `false` | Animated pulse ring around each marker |
+| `connections` | `GlobeConnection[]` | `[]` | Great-circle arcs between marker/coordinate pairs |
+| `connectionColor` | `string` | `"255, 255, 255"` | Default arc color as an `"r, g, b"` triplet |
+| `connectionOpacity` | `number` | `0.6` | Default arc opacity |
+| `connectionWidth` | `number` | `1.5` | Default arc stroke width in CSS px |
 | `zoom` | `number` | `1` | Initial zoom level |
 | `minZoom` | `number` | `0.5` | Minimum zoom level |
 | `maxZoom` | `number` | `2.5` | Maximum zoom level |
@@ -136,6 +156,18 @@ Nothing special needed — import and render.
 | `onMarkerClick` | `(marker) => void` | — | Click callback on a marker |
 | `onMarkerHover` | `(marker \| null) => void` | — | Hover callback (null on mouse leave) |
 | `className` / `style` | — | — | Applied to the wrapper element |
+
+### `GlobeConnection`
+
+```ts
+interface GlobeConnection {
+  from: { lat: number; lon: number };
+  to:   { lat: number; lon: number };
+  color?:    string;  // overrides connectionColor
+  opacity?:  number;  // overrides connectionOpacity
+  width?:    number;  // overrides connectionWidth
+}
+```
 
 ### Imperative ref
 

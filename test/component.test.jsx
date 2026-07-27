@@ -342,6 +342,21 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     expect(strokesWithPulse).toBeGreaterThan(strokesWithoutPulse);
   });
 
+  it("dibuja arcos entre marcadores cuando se pasan connections", async () => {
+    render(
+      <LandGlobe
+        markers={[{ lat: 0, lon: 0, name: "Test" }]}
+        initialRotation={{ x: 0, y: Math.PI / 2 }}
+        connections={[
+          { from: { lat: 0, lon: 0 }, to: { lat: 30, lon: 30 }, color: "59, 130, 246" },
+        ]}
+      />,
+    );
+    await waitFrames();
+
+    expect(ctx.strokeStyles.some((s) => typeof s === "string" && s.includes("rgba(59, 130, 246,"))).toBe(true);
+  });
+
   it("llama onMarkerHover al entrar y salir de un marcador", async () => {
     const onHover = vi.fn();
     const { container } = render(

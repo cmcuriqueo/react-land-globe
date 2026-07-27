@@ -91,6 +91,10 @@ const LandGlobe = React.forwardRef(function LandGlobe({
   markerGlowColor = "239, 68, 68",
   markerCoreColor = "255, 255, 255",
   markerPulse = false,
+  connections = [],
+  connectionColor = "255, 255, 255",
+  connectionOpacity = 0.6,
+  connectionWidth = 1.5,
   zoom = 1,
   minZoom = 0.5,
   maxZoom = 2.5,
@@ -149,6 +153,10 @@ const LandGlobe = React.forwardRef(function LandGlobe({
     markerGlowColor,
     markerCoreColor,
     markerPulse,
+    connections,
+    connectionColor,
+    connectionOpacity,
+    connectionWidth,
     zoom,
     minZoom,
     maxZoom,
@@ -391,6 +399,90 @@ const LandGlobe = React.forwardRef(function LandGlobe({
         }
         ctx.closePath();
         ctx.fill();
+      }
+    };
+
+    const drawConnections = (rotX, rotY) => {
+      const cfg = config.current;
+      if (!cfg.connections || cfg.connections.length === 0) return;
+
+      const toUnit = (lat, lon) => {
+        const phi = (lat * Math.PI) / 180;
+        const theta = (-lon * Math.PI) / 180;
+        return {
+          x: Math.cos(phi) * Math.cos(theta),
+          y: Math.sin(phi),
+          z: Math.cos(phi) * Math.sin(theta),
+        };
+      };
+
+      for (const conn of cfg.connections) {
+        if (!conn.from || !conn.to) continue;
+        const color = conn.color ?? cfg.connectionColor;
+        const opacity = conn.opacity ?? cfg.connectionOpacity;
+        const width = conn.width ?? cfg.connectionWidth;
+
+        const a = toUnit(conn.from.lat, conn.from.lon);
+        const b = toUnit(conn.to.lat, conn.to.lon);
+        const dot = Math.min(1, Math.max(-1, a.x * b.x + a.y * b.y + a.z * b.z));
+        const omega = Math.acos(dot);
+        const samples = Math.max(2, Math.ceil(omega * 20));
+
+        ctx.lineWidth = width;
+        ctx.lineCap = "round";
+
+        let prev = null;
+        for (let i = 0; i <= samples; i++) {
+          const t = i / samples;
+          let vec;
+          if (omega < 1e-6) {
+            vec = a;
+          } else {
+            const s0 = Math.sin((1 - t) * omega);
+            const s1 = Math.sin(t * omega);
+            const denom = Math.sin(omega);
+            vec = {
+              x: (s0 * a.x + s1 * b.x) / denom,
+              y: (s0 * a.y + s1 * b.y) / denom,
+              z: (s0 * a.z + s1 * b.z) / denom,
+            };
+          }
+
+          const lat = (Math.asin(vec.y) * 180) / Math.PI;
+          const lon = (-Math.atan2(vec.z, vec.x) * 180) / Math.PI;
+          const p = projectAt(lat, lon, rotX, rotY);
+
+          if (prev) {
+            if (prev.z > 0 && p.z > 0) {
+              const depth = (prev.z + p.z) / 2 / radius;
+              const alpha = Math.pow(Math.max(0, depth), 1.25) * opacity;
+              ctx.beginPath();
+              ctx.moveTo(prev.x, prev.y);
+              ctx.lineTo(p.x, p.y);
+              ctx.strokeStyle = `rgba(${color}, ${alpha})`;
+              ctx.stroke();
+            } else if (prev.z > 0 && p.z <= 0) {
+              const tclip = prev.z / (prev.z - p.z);
+              const ix = prev.x + (p.x - prev.x) * tclip;
+              const iy = prev.y + (p.y - prev.y) * tclip;
+              ctx.beginPath();
+              ctx.moveTo(prev.x, prev.y);
+              ctx.lineTo(ix, iy);
+              ctx.strokeStyle = `rgba(${color}, ${opacity})`;
+              ctx.stroke();
+            } else if (prev.z <= 0 && p.z > 0) {
+              const tclip = prev.z / (prev.z - p.z);
+              const ix = prev.x + (p.x - prev.x) * tclip;
+              const iy = prev.y + (p.y - prev.y) * tclip;
+              ctx.beginPath();
+              ctx.moveTo(ix, iy);
+              ctx.lineTo(p.x, p.y);
+              ctx.strokeStyle = `rgba(${color}, ${opacity})`;
+              ctx.stroke();
+            }
+          }
+          prev = p;
+        }
       }
     };
 
@@ -648,6 +740,9 @@ const LandGlobe = React.forwardRef(function LandGlobe({
       if (cfg.landStyle === "outline" || cfg.landStyle === "dots+outline") {
         drawOutlines(rotation.current.x, rotation.current.y);
       }
+
+      // Arcos entre marcadores
+      drawConnections(rotation.current.x, rotation.current.y);
 
       // Marcadores
       const visibleMarkers = [];

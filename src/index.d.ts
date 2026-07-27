@@ -32,6 +32,19 @@ export interface GlobeMarker {
   size?: number;
 }
 
+export interface GlobeConnection {
+  /** Punto inicial del arco. */
+  from: { lat: number; lon: number };
+  /** Punto final del arco. */
+  to: { lat: number; lon: number };
+  /** Color del arco como triplete RGB "r, g, b". */
+  color?: string;
+  /** Opacidad del arco (0 a 1). */
+  opacity?: number;
+  /** Grosor del arco en px CSS. */
+  width?: number;
+}
+
 export interface LandGlobeProps {
   /** Puntos a marcar en el globo. Default: 9 ciudades de Latinoamérica. */
   markers?: GlobeMarker[];
@@ -73,6 +86,14 @@ export interface LandGlobeProps {
   markerCoreColor?: string;
   /** Activa un anillo pulsante alrededor de cada marcador. Default: false. */
   markerPulse?: boolean;
+  /** Arcos great-circle entre pares de coordenadas. Default: []. */
+  connections?: GlobeConnection[];
+  /** Color por defecto de los arcos, triplete RGB "r, g, b". Default: "255, 255, 255". */
+  connectionColor?: string;
+  /** Opacidad por defecto de los arcos. Default: 0.6. */
+  connectionOpacity?: number;
+  /** Grosor por defecto de los arcos en px. Default: 1.5. */
+  connectionWidth?: number;
   /** Zoom inicial del globo. Default: 1. */
   zoom?: number;
   /** Zoom mínimo permitido. Default: 0.5. */
