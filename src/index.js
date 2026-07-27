@@ -128,6 +128,7 @@ const LandGlobe = React.forwardRef(function LandGlobe({
   const previousMouse = useRef({ x: 0, y: 0 });
   const rotation = useRef({ x: initialRotation.x, y: initialRotation.y });
   const targetRotation = useRef(null);
+  const resumeRef = useRef(null);
   const zoomRef = useRef(zoom);
   const hoveredHit = useRef(null);
   const tooltipTimer = useRef(null);
@@ -135,6 +136,12 @@ const LandGlobe = React.forwardRef(function LandGlobe({
   useEffect(() => {
     zoomRef.current = zoom;
   }, [zoom]);
+
+  useEffect(() => {
+    if (!staticMode) {
+      resumeRef.current?.();
+    }
+  }, [staticMode]);
 
   const [hoveredMarker, setHoveredMarker] = useState(null);
   const [tooltipVisible, setTooltipVisible] = useState(false);
@@ -879,9 +886,19 @@ const LandGlobe = React.forwardRef(function LandGlobe({
       }
     };
 
+    const resume = () => {
+      cancelAnimationFrame(animId);
+      clearTimeout(timeoutId);
+      animId = undefined;
+      timeoutId = undefined;
+      schedule();
+    };
+    resumeRef.current = resume;
+
     render();
 
     return () => {
+      resumeRef.current = null;
       cancelAnimationFrame(animId);
       clearTimeout(timeoutId);
       observer?.disconnect();

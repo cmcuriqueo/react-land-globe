@@ -387,6 +387,18 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     expect(ctx.clearRect.mock.calls.length).toBe(frames);
   });
 
+  it("retoma la animación al desactivar static", async () => {
+    const { rerender } = render(
+      <LandGlobe static markers={[{ lat: 0, lon: 0, name: "Test" }]} autoRotateSpeed={0.05} />,
+    );
+    await waitFrames(120);
+    const frames = ctx.clearRect.mock.calls.length;
+
+    rerender(<LandGlobe markers={[{ lat: 0, lon: 0, name: "Test" }]} autoRotateSpeed={0.05} />);
+    await waitFrames(120);
+    expect(ctx.clearRect.mock.calls.length).toBeGreaterThan(frames);
+  });
+
   it("llama onMarkerHover al entrar y salir de un marcador", async () => {
     const onHover = vi.fn();
     const { container } = render(
