@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import LandGlobe from "../src/index.js";
 
@@ -46,6 +46,7 @@ function Control({ label, value, children }) {
 }
 
 function Playground() {
+  const globeRef = useRef(null);
   const [markersText, setMarkersText] = useState(JSON.stringify(DEFAULT_MARKERS, null, 2));
   const [markers, setMarkers] = useState(DEFAULT_MARKERS);
   const [markersError, setMarkersError] = useState(null);
@@ -103,6 +104,7 @@ function Playground() {
           react-land-globe <span style={{ opacity: 0.5, fontWeight: 400 }}>playground</span>
         </h1>
         <LandGlobe
+          ref={globeRef}
           markers={markers}
           autoRotateSpeed={autoRotateSpeed}
           dotOpacity={dotOpacity}
@@ -172,7 +174,6 @@ function Playground() {
             <option value="dots">dots</option>
             <option value="outline">outline</option>
             <option value="dots+outline">dots+outline</option>
-            <option value="fill">fill</option>
           </select>
         </Control>
 
@@ -288,6 +289,21 @@ function Playground() {
           </button>
           <button onClick={() => loadPreset([])} style={btnStyle("#333")}>
             Sin marcadores
+          </button>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+          <button
+            onClick={() => globeRef.current?.centerOn({ lat: 35.68, lon: 139.69 })}
+            style={btnStyle("#2563eb")}
+          >
+            Centrar Tokio
+          </button>
+          <button
+            onClick={() => globeRef.current?.centerOnMarkers(markers)}
+            style={btnStyle("#2563eb")}
+          >
+            Centrar todos
           </button>
         </div>
       </div>

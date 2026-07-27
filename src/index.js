@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useImperativeHandle, useRef, useState } from "react";
 import landDots from "./land-dots.js";
 import landOutlines from "./land-outlines.js";
 import { project } from "./project.js";
@@ -70,12 +70,13 @@ function boxesOverlap(a, b) {
  * Sin dependencias más allá de React. Seguro para SSR: todo el acceso al DOM
  * ocurre dentro de useEffect / event handlers.
  */
-export default function LandGlobe({
+const LandGlobe = React.forwardRef(function LandGlobe({
   markers = DEFAULT_MARKERS,
   size = 520,
   autoRotateSpeed = 0.0026,
   dragSpeed = 0.005,
   verticalDragSpeed = 0.005,
+  centerAnimationSpeed = 0.08,
   interactive = true,
   initialRotation = { x: 0.41, y: -0.9 },
   landStyle = "dots",
@@ -109,13 +110,14 @@ export default function LandGlobe({
   onMarkerHover,
   className,
   style,
-}) {
+}, ref) {
   const canvasRef = useRef(null);
   const wrapperRef = useRef(null);
   const tooltipRef = useRef(null);
   const isDragging = useRef(false);
   const previousMouse = useRef({ x: 0, y: 0 });
   const rotation = useRef({ x: initialRotation.x, y: initialRotation.y });
+  const targetRotation = useRef(null);
   const zoomRef = useRef(zoom);
   const hoveredHit = useRef(null);
   const tooltipTimer = useRef(null);
@@ -134,6 +136,7 @@ export default function LandGlobe({
     markers,
     autoRotateSpeed,
     verticalDragSpeed,
+    centerAnimationSpeed,
     landStyle,
     dotColor,
     dotOpacity,
@@ -164,6 +167,53 @@ export default function LandGlobe({
     onMarkerHover,
     interactive,
   };
+
+  const rotationForMarker = (m) => {
+    const phi = (m.lat * Math.PI) / 180;
+    const theta = (-m.lon * Math.PI) / 180;
+    const x = Math.cos(phi) * Math.cos(theta);
+    const y = Math.sin(phi);
+    const z = Math.cos(phi) * Math.sin(theta);
+    return {
+      x: -Math.asin(y),
+      y: Math.PI / 2 - Math.atan2(z, x),
+    };
+  };
+
+  const rotationForMarkers = (ms) => {
+    if (!ms || ms.length === 0) return null;
+    if (ms.length === 1) return rotationForMarker(ms[0]);
+    let x = 0;
+    let y = 0;
+    let z = 0;
+    for (const m of ms) {
+      const phi = (m.lat * Math.PI) / 180;
+      const theta = (-m.lon * Math.PI) / 180;
+      x += Math.cos(phi) * Math.cos(theta);
+      y += Math.sin(phi);
+      z += Math.cos(phi) * Math.sin(theta);
+    }
+    const len = Math.sqrt(x * x + y * y + z * z);
+    if (len < 1e-6) return null;
+    x /= len;
+    y /= len;
+    z /= len;
+    return {
+      x: -Math.asin(y),
+      y: Math.PI / 2 - Math.atan2(z, x),
+    };
+  };
+
+  useImperativeHandle(ref, () => ({
+    centerOn: (marker) => {
+      if (!marker) return;
+      targetRotation.current = rotationForMarker(marker);
+    },
+    centerOnMarkers: (markerList) => {
+      targetRotation.current = rotationForMarkers(markerList);
+    },
+    getRotation: () => ({ ...rotation.current }),
+  }));
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -523,7 +573,25 @@ export default function LandGlobe({
       const cfg = config.current;
       ctx.clearRect(0, 0, width, height);
 
-      if (!isDragging.current) {
+      if (targetRotation.current) {
+        const t = cfg.centerAnimationSpeed;
+        // Elegir el camino más corto en y atravesando el borde ±π.
+        let dy = targetRotation.current.y - rotation.current.y;
+        while (dy > Math.PI) dy -= 2 * Math.PI;
+        while (dy < -Math.PI) dy += 2 * Math.PI;
+
+        rotation.current.x += (targetRotation.current.x - rotation.current.x) * t;
+        rotation.current.y += dy * t;
+
+        if (
+          Math.abs(targetRotation.current.x - rotation.current.x) < 0.001 &&
+          Math.abs(dy) < 0.001
+        ) {
+          rotation.current.x = targetRotation.current.x;
+          rotation.current.y = targetRotation.current.y;
+          targetRotation.current = null;
+        }
+      } else if (!isDragging.current) {
         rotation.current.y += cfg.autoRotateSpeed;
       }
 
@@ -728,4 +796,6 @@ export default function LandGlobe({
         )
       : null,
   );
-}
+});
+
+export default LandGlobe;

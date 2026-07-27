@@ -397,4 +397,52 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     expect(drawnTexts.has("A")).toBe(true);
     expect(drawnTexts.has("B")).toBe(true);
   });
+
+  it("expone ref para centrar la vista en un marcador", async () => {
+    const ref = React.createRef();
+    render(
+      <LandGlobe
+        ref={ref}
+        markers={[{ lat: 0, lon: 0, name: "Test" }]}
+        initialRotation={{ x: 0, y: 0 }}
+        autoRotateSpeed={0}
+      />,
+    );
+    await waitFrames();
+
+    const before = ref.current.getRotation();
+    ref.current.centerOn({ lat: 40, lon: 45 });
+    await waitFrames(250);
+    const after = ref.current.getRotation();
+
+    expect(Math.abs(after.x - before.x)).toBeGreaterThan(0.3);
+    expect(Math.abs(after.y - before.y)).toBeGreaterThan(0.3);
+  });
+
+  it("expone ref para centrar la vista en un grupo de marcadores", async () => {
+    const ref = React.createRef();
+    render(
+      <LandGlobe
+        ref={ref}
+        markers={[
+          { lat: 40, lon: -60, name: "A" },
+          { lat: 30, lon: -80, name: "B" },
+        ]}
+        initialRotation={{ x: 0, y: 0 }}
+        autoRotateSpeed={0}
+      />,
+    );
+    await waitFrames();
+
+    const before = ref.current.getRotation();
+    ref.current.centerOnMarkers([
+      { lat: 40, lon: -60 },
+      { lat: 30, lon: -80 },
+    ]);
+    await waitFrames(250);
+    const after = ref.current.getRotation();
+
+    expect(Math.abs(after.x - before.x)).toBeGreaterThan(0.3);
+    expect(Math.abs(after.y - before.y)).toBeGreaterThan(0.1);
+  });
 });

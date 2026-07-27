@@ -103,6 +103,7 @@ Nothing special needed — import and render.
 | `autoRotateSpeed` | `number` | `0.0026` | Auto-rotation speed in radians per frame. `0` disables it |
 | `dragSpeed` | `number` | `0.005` | Horizontal drag sensitivity |
 | `verticalDragSpeed` | `number` | `0.005` | Vertical drag sensitivity (rotates the globe up/down) |
+| `centerAnimationSpeed` | `number` | `0.08` | Interpolation speed when centering on a marker via ref |
 | `interactive` | `boolean` | `true` | Enable mouse/touch drag |
 | `initialRotation` | `{ x, y }` | `{ x: 0.41, y: -0.9 }` | Initial rotation (the default centers the Americas) |
 | `landStyle` | `"dots" \| "outline" \| "dots+outline" \| "fill"` | `"dots"` | Continent rendering style |
@@ -135,6 +136,37 @@ Nothing special needed — import and render.
 | `onMarkerClick` | `(marker) => void` | — | Click callback on a marker |
 | `onMarkerHover` | `(marker \| null) => void` | — | Hover callback (null on mouse leave) |
 | `className` / `style` | — | — | Applied to the wrapper element |
+
+### Imperative ref
+
+The component accepts a ref that exposes methods to control the camera programmatically:
+
+```jsx
+import { useRef } from "react";
+import LandGlobe from "react-land-globe";
+
+function App() {
+  const globeRef = useRef(null);
+
+  return (
+    <>
+      <LandGlobe ref={globeRef} />
+      <button onClick={() => globeRef.current?.centerOn({ lat: 35.68, lon: 139.69 })}>
+        Center on Tokyo
+      </button>
+      <button onClick={() => globeRef.current?.centerOnMarkers(markers)}>
+        Fit all markers
+      </button>
+    </>
+  );
+}
+```
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `centerOn` | `(marker: GlobeMarker) => void` | Smoothly rotate so the marker faces the viewer |
+| `centerOnMarkers` | `(markers: GlobeMarker[]) => void` | Rotate to the centroid of a group of markers |
+| `getRotation` | `() => { x, y }` | Current rotation in radians |
 
 ### `GlobeMarker`
 

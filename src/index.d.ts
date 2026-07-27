@@ -43,6 +43,8 @@ export interface LandGlobeProps {
   dragSpeed?: number;
   /** Sensibilidad del arrastre vertical (rotación en X). Default: 0.005. */
   verticalDragSpeed?: number;
+  /** Velocidad de interpolación al centrar un marcador vía ref. Default: 0.08. */
+  centerAnimationSpeed?: number;
   /** Habilita arrastre con mouse/touch. Default: true. */
   interactive?: boolean;
   /** Rotación inicial. Default: { x: 0.41, y: -0.9 } (centrado en América). */
@@ -109,6 +111,17 @@ export interface LandGlobeProps {
   style?: React.CSSProperties;
 }
 
-declare function LandGlobe(props: LandGlobeProps): React.ReactElement;
+export interface LandGlobeRef {
+  /** Rota el globo para centrar la vista en un marcador. */
+  centerOn: (marker: GlobeMarker) => void;
+  /** Rota el globo para centrar la vista en el centroide de un grupo de marcadores. */
+  centerOnMarkers: (markers: GlobeMarker[]) => void;
+  /** Devuelve la rotación actual en radianes. */
+  getRotation: () => { x: number; y: number };
+}
+
+declare const LandGlobe: React.ForwardRefExoticComponent<
+  LandGlobeProps & React.RefAttributes<LandGlobeRef>
+>;
 
 export default LandGlobe;
