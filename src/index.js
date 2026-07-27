@@ -256,55 +256,171 @@ export default function LandGlobe({
       const cfg = config.current;
       ctx.fillStyle = `rgba(${cfg.fillColor}, ${cfg.fillOpacity})`;
 
+      const normAngle = (a) => {
+        while (a < 0) a += 2 * Math.PI;
+        while (a >= 2 * Math.PI) a -= 2 * Math.PI;
+        return a;
+      };
+
+      const pointInPolygon = (px, py, poly) => {
+        let inside = false;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+          const xi = poly[i].x;
+          const yi = poly[i].y;
+          const xj = poly[j].x;
+          const yj = poly[j].y;
+          const intersect =
+            (yi > py) !== (yj > py) &&
+            px < ((xj - xi) * (py - yi)) / (yj - yi + 1e-12) + xi;
+          if (intersect) inside = !inside;
+        }
+        return inside;
+      };
+
+      const arcPolygon = (startAngle, endAngle, counterClockwise, steps) => {
+        const poly = [];
+        let s = normAngle(startAngle);
+        let e = normAngle(endAngle);
+        if (counterClockwise) {
+          if (e <= s) e += 2 * Math.PI;
+        } else {
+          if (e >= s) e -= 2 * Math.PI;
+        }
+        for (let i = 0; i <= steps; i++) {
+          const t = s + (e - s) * (i / steps);
+          poly.push({
+            x: centerX + radius * Math.cos(t),
+            y: centerY + radius * Math.sin(t),
+          });
+        }
+        return poly;
+      };
+
       for (const ring of landOutlines) {
-        const polygons = [];
-        let current = [];
+        const n = ring.length - 1; // ignorar punto final duplicado
+        if (n < 3) continue;
 
-        let prev = projectAt(ring[0][0], ring[0][1], rotX, rotY);
-        let prevVisible = prev.z > 0;
+        const segments = [];
+        let current = null;
 
-        if (prevVisible) {
-          current.push({ x: prev.x, y: prev.y });
-        }
-
-        for (let i = 1; i < ring.length; i++) {
-          const curr = projectAt(ring[i][0], ring[i][1], rotX, rotY);
-          const currVisible = curr.z > 0;
-
-          if (prevVisible && currVisible) {
-            current.push({ x: curr.x, y: curr.y });
-          } else if (prevVisible && !currVisible) {
-            const t = prev.z / (prev.z - curr.z);
-            current.push({
-              x: prev.x + (curr.x - prev.x) * t,
-              y: prev.y + (curr.y - prev.y) * t,
-            });
-            polygons.push(current);
-            current = [];
-          } else if (!prevVisible && currVisible) {
-            const t = prev.z / (prev.z - curr.z);
-            current = [{
-              x: prev.x + (curr.x - prev.x) * t,
-              y: prev.y + (curr.y - prev.y) * t,
-            }];
-            current.push({ x: curr.x, y: curr.y });
+        const addPoint = (p, isCut) => {
+          if (!current) {
+            current = { points: [{ x: p.x, y: p.y, cut: isCut }] };
+          } else {
+            current.points.push({ x: p.x, y: p.y, cut: isCut });
           }
+        };
 
-          prev = curr;
-          prevVisible = currVisible;
+        const closeSegment = () => {
+          if (current) {
+            segments.push(current);
+            current = null;
+          }
+        };
+
+        for (let i = 0; i < n; i++) {
+          const [lat1, lon1] = ring[i];
+          const [lat2, lon2] = ring[(i + 1) % n];
+          const p1 = projectAt(lat1, lon1, rotX, rotY);
+          const p2 = projectAt(lat2, lon2, rotX, rotY);
+
+          const v1 = p1.z > 0;
+          const v2 = p2.z > 0;
+
+          if (v1 && v2) {
+            addPoint(p2, false);
+          } else if (v1 && !v2) {
+            const t = p1.z / (p1.z - p2.z);
+            addPoint({
+              x: p1.x + (p2.x - p1.x) * t,
+              y: p1.y + (p2.y - p1.y) * t,
+            }, true);
+            closeSegment();
+          } else if (!v1 && v2) {
+            const t = p1.z / (p1.z - p2.z);
+            addPoint({
+              x: p1.x + (p2.x - p1.x) * t,
+              y: p1.y + (p2.y - p1.y) * t,
+            }, true);
+            addPoint(p2, false);
+          }
         }
 
-        if (current.length > 0) {
-          polygons.push(current);
+        closeSegment();
+
+        // Si el inicio del ring cae en medio de un arco visible, el primer y
+        // último segmento son partes del mismo arco: los unimos.
+        if (segments.length > 1) {
+          const first = segments[0];
+          const last = segments[segments.length - 1];
+          if (!first.points[0].cut && !last.points[last.points.length - 1].cut) {
+            last.points.push(...first.points);
+            segments.shift();
+          }
         }
 
-        for (const poly of polygons) {
-          if (poly.length < 3) continue;
+        for (const seg of segments) {
+          const pts = seg.points;
+          if (pts.length < 3) continue;
+
+          const first = pts[0];
+          const last = pts[pts.length - 1];
+          const needsArc = first.cut && last.cut;
+
           ctx.beginPath();
-          ctx.moveTo(poly[0].x, poly[0].y);
-          for (let i = 1; i < poly.length; i++) {
-            ctx.lineTo(poly[i].x, poly[i].y);
+          ctx.moveTo(first.x, first.y);
+          for (let i = 1; i < pts.length; i++) {
+            ctx.lineTo(pts[i].x, pts[i].y);
           }
+
+          if (needsArc) {
+            const startAngle = Math.atan2(last.y - centerY, last.x - centerX);
+            const endAngle = Math.atan2(first.y - centerY, first.x - centerX);
+
+            // Elegimos el arco probando cuál forma un polígono que contiene
+            // a un punto interior del cap visible.
+            let interior = null;
+            let minDist = Infinity;
+            for (const pt of pts) {
+              if (!pt.cut) {
+                const dx = pt.x - centerX;
+                const dy = pt.y - centerY;
+                const dist = dx * dx + dy * dy;
+                if (dist < minDist) {
+                  minDist = dist;
+                  interior = pt;
+                }
+              }
+            }
+
+            let useCcw;
+            if (interior) {
+              const testPoint = {
+                x: interior.x * 0.7 + centerX * 0.3,
+                y: interior.y * 0.7 + centerY * 0.3,
+              };
+              const ccwPoly = [...pts, ...arcPolygon(startAngle, endAngle, true, 12)];
+              const cwPoly = [...pts, ...arcPolygon(startAngle, endAngle, false, 12)];
+              const inCcw = pointInPolygon(testPoint.x, testPoint.y, ccwPoly);
+              const inCw = pointInPolygon(testPoint.x, testPoint.y, cwPoly);
+              if (inCcw && !inCw) {
+                useCcw = true;
+              } else if (!inCcw && inCw) {
+                useCcw = false;
+              } else {
+                const s = normAngle(startAngle);
+                const e = normAngle(endAngle);
+                useCcw = (e - s + 2 * Math.PI) % (2 * Math.PI) <= Math.PI;
+              }
+            } else {
+              const s = normAngle(startAngle);
+              const e = normAngle(endAngle);
+              useCcw = (e - s + 2 * Math.PI) % (2 * Math.PI) <= Math.PI;
+            }
+
+            ctx.arc(centerX, centerY, radius, startAngle, endAngle, useCcw);
+          }
+
           ctx.closePath();
           ctx.fill();
         }
