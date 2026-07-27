@@ -61,6 +61,7 @@ beforeEach(() => {
     configurable: true,
     get: () => 500,
   });
+  HTMLCanvasElement.prototype.toDataURL = vi.fn(() => "data:image/png;base64,test");
   HTMLCanvasElement.prototype.getBoundingClientRect = vi.fn(() => ({
     left: 0,
     top: 0,
@@ -397,6 +398,16 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     rerender(<LandGlobe markers={[{ lat: 0, lon: 0, name: "Test" }]} autoRotateSpeed={0.05} />);
     await waitFrames(120);
     expect(ctx.clearRect.mock.calls.length).toBeGreaterThan(frames);
+  });
+
+  it("expone toDataURL para exportar la imagen del canvas", async () => {
+    const ref = React.createRef();
+    render(<LandGlobe ref={ref} markers={[{ lat: 0, lon: 0, name: "Test" }]} />);
+    await waitFrames();
+
+    const dataUrl = ref.current.toDataURL();
+    expect(typeof dataUrl).toBe("string");
+    expect(dataUrl.startsWith("data:")).toBe(true);
   });
 
   it("llama onMarkerHover al entrar y salir de un marcador", async () => {

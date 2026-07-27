@@ -238,6 +238,7 @@ const LandGlobe = React.forwardRef(function LandGlobe({
       targetRotation.current = rotationForMarkers(markerList);
     },
     getRotation: () => ({ ...rotation.current }),
+    toDataURL: (type, quality) => canvasRef.current?.toDataURL(type, quality) ?? null,
   }));
 
   useEffect(() => {

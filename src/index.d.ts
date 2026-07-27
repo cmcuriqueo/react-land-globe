@@ -147,6 +147,8 @@ export interface LandGlobeRef {
   centerOnMarkers: (markers: GlobeMarker[]) => void;
   /** Devuelve la rotación actual en radianes. */
   getRotation: () => { x: number; y: number };
+  /** Exporta el canvas actual como data URL. */
+  toDataURL: (type?: string, quality?: number) => string | null;
 }
 
 declare const LandGlobe: React.ForwardRefExoticComponent<

@@ -357,6 +357,20 @@ function Playground() {
           >
             Centrar todos
           </button>
+          <button
+            onClick={() => {
+              const url = globeRef.current?.toDataURL();
+              if (url) {
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "globe.png";
+                a.click();
+              }
+            }}
+            style={btnStyle("#059669")}
+          >
+            Exportar imagen
+          </button>
         </div>
       </div>
     </div>

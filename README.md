@@ -203,6 +203,7 @@ function App() {
 | `centerOn` | `(marker: GlobeMarker) => void` | Smoothly rotate so the marker faces the viewer |
 | `centerOnMarkers` | `(markers: GlobeMarker[]) => void` | Rotate to the centroid of a group of markers |
 | `getRotation` | `() => { x, y }` | Current rotation in radians |
+| `toDataURL` | `(type?, quality?) => string \| null` | Export the current canvas as a data URL |
 
 ### `GlobeMarker`
 
