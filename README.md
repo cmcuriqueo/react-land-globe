@@ -4,7 +4,7 @@
 [![license](https://img.shields.io/npm/l/react-land-globe)](./LICENSE)
 [![types](https://img.shields.io/badge/types-TypeScript-blue)](./src/index.d.ts)
 
-An interactive **canvas globe** for React: dotted or outlined continents (5,617 precomputed land points and 125 coastline outlines from Natural Earth), smooth auto-rotation, glowing markers, and horizontal drag with mouse & touch.
+An interactive **canvas globe** for React: dotted or outlined continents (5,617 precomputed land points and 125 coastline outlines from Natural Earth), smooth auto-rotation, glowing markers with optional pulse, great-circle connection arcs, canvas labels with collision-aware positioning, HTML tooltips, mouse-wheel zoom, and horizontal drag with mouse & touch.
 
 ![react-land-globe](./docs/globe.png)
 
@@ -13,6 +13,7 @@ An interactive **canvas globe** for React: dotted or outlined continents (5,617 
 - **SSR-safe** — nothing touches the DOM until `useEffect` (safe for Next.js and Astro islands)
 - **Lightweight** — ~46 KB tarball, no map libraries, no WebGL, 60 fps on a plain `<canvas>`
 - **TypeScript types included**
+- **Performance controls** — cap FPS, pause on hover/off-screen, or render a static frame
 
 ## Installation
 
@@ -229,6 +230,89 @@ import LandGlobe, { type GlobeMarker } from "react-land-globe";
 const markers: GlobeMarker[] = [{ lat: 0, lon: 0, name: "Null Island" }];
 ```
 
+### `LabelStyle`
+
+```ts
+interface LabelStyle {
+  font?: string;              // CSS font shorthand, e.g. "12px sans-serif"
+  color?: string;             // "r, g, b" triplet
+  backgroundColor?: string;   // "r, g, b" triplet
+  padding?: number;           // px
+  borderRadius?: number;      // px
+}
+```
+
+## Common recipes
+
+### Static hero (no animation, no zoom)
+
+```jsx
+<LandGlobe autoRotateSpeed={0} enableZoom={false} static />
+```
+
+### Pulsing markers with great-circle connections
+
+```jsx
+<LandGlobe
+  markers={[
+    { lat: 40.71, lon: -74.0, name: "New York" },
+    { lat: 48.85, lon: 2.35, name: "Paris" },
+  ]}
+  markerPulse
+  connections={[
+    { from: { lat: 40.71, lon: -74.0 }, to: { lat: 48.85, lon: 2.35 } },
+  ]}
+/>
+```
+
+### Labels that avoid overlapping
+
+```jsx
+<LandGlobe
+  markers={[...]}
+  showLabels
+  labelPosition="auto"
+  labelStyle={{ font: "11px sans-serif", color: "255, 255, 255" }}
+/>
+```
+
+### Cap FPS or pause off-screen
+
+```jsx
+<LandGlobe targetFPS={30} pauseOnHover pauseOnInvisible />
+```
+
+## Technical notes
+
+### Coordinate system & rotation
+
+- `initialRotation={{ x, y }}` is expressed in **radians**.
+  - `x`: vertical tilt. `0` means the equator faces the viewer; positive values tilt the north pole up.
+  - `y`: horizontal spin. `0` centers the prime meridian; the default `-0.9` centers the Americas.
+- Mouse/touch drag only updates `y`. Use `initialRotation` or listen to `onRotationChange` and feed the value back if you need full tilt control.
+- `onRotationChange({ x, y })` fires while dragging with normalized values (`x` clamped to `[-π/2, π/2]` and `y` wrapped to `[0, 2π)`).
+
+### Zoom
+
+- `enableZoom` toggles the mouse-wheel zoom handler.
+- `zoom` sets the initial level; `onZoomChange(zoom)` reports changes.
+- `minZoom`/`maxZoom` clamp the value.
+
+### Colors
+
+All color props expect `"r, g, b"` strings. The component composites them with per-point opacity based on depth, so hex values are not accepted directly.
+
+### Performance
+
+- `targetFPS` throttles `requestAnimationFrame` to a fixed interval.
+- `static` renders a single frame and stops the loop.
+- `pauseOnInvisible` uses `IntersectionObserver` to pause rendering when the globe leaves the viewport.
+- `maxPixelRatio` caps the canvas backing store size on high-DPI screens.
+
+### SSR & hydration
+
+The canvas element, event listeners, and animation loop are created inside `useEffect`. The server-rendered output is an empty wrapper, so it hydrates cleanly in Next.js and Astro islands.
+
 ## How it works
 
 The globe projects ~5,600 precomputed `(lat, lon)` land points and 125 coastline
@@ -238,6 +322,13 @@ depth (`z`) to fake volume. Land data is generated at build time from
 [Natural Earth](https://www.naturalearthdata.com/) 110m TopoJSON, so runtime
 cost is just canvas drawing — no geometry math on the client, no hydration
 spike.
+
+Markers and connection arcs are drawn back-to-front by depth, so closer elements
+appear on top. Labels are rendered in canvas with a small background pill;
+`labelPosition="auto"` computes bounding boxes for the visible labels and picks
+the first side (top, right, bottom, left) that does not collide. Tooltips are
+plain React DOM nodes positioned absolutely over the wrapper, so you can style
+them with CSS or animation libraries.
 
 ## Playground
 
