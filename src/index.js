@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useImperativeHandle, useRef, useState } from "react";
 import landDots from "./land-dots.js";
+import landOutlines from "./land-outlines.js";
 import { project } from "./project.js";
 
 // Marcadores por defecto: principales ciudades de Latinoamérica.
@@ -21,35 +22,125 @@ const DEFAULT_BACKGROUND = [
   [1, "#000000"],
 ];
 
+const DEFAULT_LABEL_STYLE = {
+  fontSize: 12,
+  fontFamily: "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+  fontWeight: "500",
+  color: "255, 255, 255",
+  backgroundColor: "0, 0, 0",
+  padding: { x: 6, y: 2 },
+  borderRadius: 4,
+};
+
 /**
- * Globo interactivo en canvas: continentes punteados, rotación automática,
- * marcadores con glow y arrastre horizontal (mouse + touch).
+ * Dibuja un rectángulo con esquinas redondeadas en el canvas.
+ * Fallback manual para entornos sin ctx.roundRect nativo.
+ */
+function roundRect(ctx, x, y, w, h, r) {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + w - radius, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+  ctx.lineTo(x + w, y + h - radius);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+  ctx.lineTo(x + radius, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+/**
+ * Detecta solapamiento entre dos bounding boxes alineados a los ejes (AABB).
+ */
+function boxesOverlap(a, b) {
+  return (
+    a.left < b.right &&
+    a.right > b.left &&
+    a.top < b.bottom &&
+    a.bottom > b.top
+  );
+}
+
+/**
+ * Globo interactivo en canvas: continentes punteados o contornos, rotación
+ * automática, marcadores con glow, labels, tooltips y arrastre horizontal.
  *
  * Sin dependencias más allá de React. Seguro para SSR: todo el acceso al DOM
  * ocurre dentro de useEffect / event handlers.
  */
-export default function LandGlobe({
+const LandGlobe = React.forwardRef(function LandGlobe({
   markers = DEFAULT_MARKERS,
   size = 520,
   autoRotateSpeed = 0.0026,
   dragSpeed = 0.005,
+  pauseOnHover = false,
+  enableZoom = true,
+  pauseOnInvisible = false,
+  static: staticMode = false,
+  targetFPS,
   interactive = true,
   initialRotation = { x: 0.41, y: -0.9 },
+  landStyle = "dots",
   dotColor = "255, 255, 255",
   dotOpacity = 0.55,
+  outlineColor = "255, 255, 255",
+  outlineOpacity = 0.75,
+  outlineWidth = 1,
   markerColor = "220, 38, 38",
   markerGlowColor = "239, 68, 68",
   markerCoreColor = "255, 255, 255",
+  markerPulse = false,
+  connections = [],
+  connectionColor = "255, 255, 255",
+  connectionOpacity = 0.6,
+  connectionWidth = 1.5,
+  zoom = 1,
+  minZoom = 0.5,
+  maxZoom = 2.5,
+  onZoomChange,
+  onRotationChange,
   backgroundStops = DEFAULT_BACKGROUND,
   showAtmosphere = true,
   maxPixelRatio,
+  showLabels = false,
+  labelPosition = "top",
+  labelOffset = 10,
+  labelStyle = DEFAULT_LABEL_STYLE,
+  labelFormatter = (m) => m.name ?? "",
+  renderTooltip,
+  tooltipDelay = 150,
+  onMarkerClick,
+  onMarkerHover,
   className,
   style,
-}) {
+}, ref) {
   const canvasRef = useRef(null);
+  const wrapperRef = useRef(null);
+  const tooltipRef = useRef(null);
   const isDragging = useRef(false);
+  const isHovering = useRef(false);
+  const isVisible = useRef(true);
   const previousMouse = useRef({ x: 0, y: 0 });
   const rotation = useRef({ x: initialRotation.x, y: initialRotation.y });
+  const resumeRef = useRef(null);
+  const zoomRef = useRef(zoom);
+  const hoveredHit = useRef(null);
+  const tooltipTimer = useRef(null);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
+  useEffect(() => {
+    if (!staticMode) {
+      resumeRef.current?.();
+    }
+  }, [staticMode]);
+
+  const [hoveredMarker, setHoveredMarker] = useState(null);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
 
   // Config viva: el loop de render lee siempre los props más recientes sin
   // necesidad de reiniciar el efecto en cada render del padre.
@@ -57,14 +148,48 @@ export default function LandGlobe({
   config.current = {
     markers,
     autoRotateSpeed,
+    pauseOnHover,
+    pauseOnInvisible,
+    enableZoom,
+    static: staticMode,
+    targetFPS,
+    landStyle,
     dotColor,
     dotOpacity,
+    outlineColor,
+    outlineOpacity,
+    outlineWidth,
     markerColor,
     markerGlowColor,
     markerCoreColor,
+    markerPulse,
+    connections,
+    connectionColor,
+    connectionOpacity,
+    connectionWidth,
+    zoom,
+    minZoom,
+    maxZoom,
+    onZoomChange,
+    onRotationChange,
     backgroundStops,
     showAtmosphere,
+    showLabels,
+    labelPosition,
+    labelOffset,
+    labelStyle,
+    labelFormatter,
+    renderTooltip,
+    tooltipDelay,
+    onMarkerClick,
+    onMarkerHover,
+    interactive,
   };
+
+  useImperativeHandle(ref, () => ({
+    getRotation: () => ({ ...rotation.current }),
+    toDataURL: (type, quality) => canvasRef.current?.toDataURL(type, quality) ?? null,
+  }));
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -77,6 +202,10 @@ export default function LandGlobe({
     let centerY = 0;
     let radius = 0;
 
+    const updateRadius = () => {
+      radius = Math.min(width, height) * 0.42 * zoomRef.current;
+    };
+
     const setup = () => {
       const dprRaw = window.devicePixelRatio || 1;
       const dpr = maxPixelRatio ? Math.min(dprRaw, maxPixelRatio) : dprRaw;
@@ -87,7 +216,7 @@ export default function LandGlobe({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       centerX = width / 2;
       centerY = height / 2;
-      radius = Math.min(width, height) * 0.42;
+      updateRadius();
     };
 
     setup();
@@ -102,14 +231,367 @@ export default function LandGlobe({
       project(lat, lon, rotX, rotY, radius, centerX, centerY);
 
     let animId;
+    let timeoutId;
+    let lastFrameTime = performance.now();
+
+    const drawOutlines = (rotX, rotY) => {
+      const cfg = config.current;
+      ctx.lineWidth = cfg.outlineWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      for (const ring of landOutlines) {
+        let prev = null;
+
+        for (let i = 0; i < ring.length; i++) {
+          const [lat, lon] = ring[i];
+          const p = projectAt(lat, lon, rotX, rotY);
+
+          if (prev && prev.z > 0 && p.z > 0) {
+            const depth = (prev.z + p.z) / 2 / radius;
+            const alpha = Math.pow(Math.max(0, depth), 1.25) * cfg.outlineOpacity;
+            ctx.beginPath();
+            ctx.moveTo(prev.x, prev.y);
+            ctx.lineTo(p.x, p.y);
+            ctx.strokeStyle = `rgba(${cfg.outlineColor}, ${alpha})`;
+            ctx.stroke();
+          }
+
+          prev = p;
+        }
+      }
+    };
+
+    const computeLabelLayout = (m, p, depth, position) => {
+      const cfg = config.current;
+      const ls = cfg.labelStyle;
+      const fontSize = ls.fontSize ?? DEFAULT_LABEL_STYLE.fontSize;
+      const fontFamily = ls.fontFamily ?? DEFAULT_LABEL_STYLE.fontFamily;
+      const fontWeight = ls.fontWeight ?? DEFAULT_LABEL_STYLE.fontWeight;
+      const text = cfg.labelFormatter(m);
+      if (!text) return null;
+
+      ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+      const metrics = ctx.measureText(text);
+      const pad = ls.padding ?? DEFAULT_LABEL_STYLE.padding;
+      const padX = typeof pad === "number" ? pad : (pad.x ?? 6);
+      const padY = typeof pad === "number" ? pad : (pad.y ?? 2);
+      const bgW = metrics.width + padX * 2;
+      const bgH = fontSize + padY * 2;
+      const r = ls.borderRadius ?? DEFAULT_LABEL_STYLE.borderRadius;
+      const offset = cfg.labelOffset + (m.size ?? 6.8);
+
+      let lx = p.x;
+      let ly = p.y;
+      switch (position) {
+        case "top":
+          ly -= offset + bgH / 2;
+          break;
+        case "bottom":
+          ly += offset + bgH / 2;
+          break;
+        case "left":
+          lx -= offset + bgW / 2;
+          break;
+        case "right":
+          lx += offset + bgW / 2;
+          break;
+        default:
+          ly -= offset + bgH / 2;
+      }
+
+      return { text, lx, ly, bgW, bgH, r };
+    };
+
+    const drawConnections = (rotX, rotY) => {
+      const cfg = config.current;
+      if (!cfg.connections || cfg.connections.length === 0) return;
+
+      const toUnit = (lat, lon) => {
+        const phi = (lat * Math.PI) / 180;
+        const theta = (-lon * Math.PI) / 180;
+        return {
+          x: Math.cos(phi) * Math.cos(theta),
+          y: Math.sin(phi),
+          z: Math.cos(phi) * Math.sin(theta),
+        };
+      };
+
+      for (const conn of cfg.connections) {
+        if (!conn.from || !conn.to) continue;
+        const color = conn.color ?? cfg.connectionColor;
+        const opacity = conn.opacity ?? cfg.connectionOpacity;
+        const width = conn.width ?? cfg.connectionWidth;
+
+        const a = toUnit(conn.from.lat, conn.from.lon);
+        const b = toUnit(conn.to.lat, conn.to.lon);
+        const dot = Math.min(1, Math.max(-1, a.x * b.x + a.y * b.y + a.z * b.z));
+        const omega = Math.acos(dot);
+        const samples = Math.max(2, Math.ceil(omega * 20));
+
+        ctx.lineWidth = width;
+        ctx.lineCap = "round";
+
+        let prev = null;
+        for (let i = 0; i <= samples; i++) {
+          const t = i / samples;
+          let vec;
+          if (omega < 1e-6) {
+            vec = a;
+          } else {
+            const s0 = Math.sin((1 - t) * omega);
+            const s1 = Math.sin(t * omega);
+            const denom = Math.sin(omega);
+            vec = {
+              x: (s0 * a.x + s1 * b.x) / denom,
+              y: (s0 * a.y + s1 * b.y) / denom,
+              z: (s0 * a.z + s1 * b.z) / denom,
+            };
+          }
+
+          const lat = (Math.asin(vec.y) * 180) / Math.PI;
+          const lon = (-Math.atan2(vec.z, vec.x) * 180) / Math.PI;
+          const p = projectAt(lat, lon, rotX, rotY);
+
+          if (prev) {
+            if (prev.z > 0 && p.z > 0) {
+              const depth = (prev.z + p.z) / 2 / radius;
+              const alpha = Math.pow(Math.max(0, depth), 1.25) * opacity;
+              ctx.beginPath();
+              ctx.moveTo(prev.x, prev.y);
+              ctx.lineTo(p.x, p.y);
+              ctx.strokeStyle = `rgba(${color}, ${alpha})`;
+              ctx.stroke();
+            } else if (prev.z > 0 && p.z <= 0) {
+              const tclip = prev.z / (prev.z - p.z);
+              const ix = prev.x + (p.x - prev.x) * tclip;
+              const iy = prev.y + (p.y - prev.y) * tclip;
+              ctx.beginPath();
+              ctx.moveTo(prev.x, prev.y);
+              ctx.lineTo(ix, iy);
+              ctx.strokeStyle = `rgba(${color}, ${opacity})`;
+              ctx.stroke();
+            } else if (prev.z <= 0 && p.z > 0) {
+              const tclip = prev.z / (prev.z - p.z);
+              const ix = prev.x + (p.x - prev.x) * tclip;
+              const iy = prev.y + (p.y - prev.y) * tclip;
+              ctx.beginPath();
+              ctx.moveTo(ix, iy);
+              ctx.lineTo(p.x, p.y);
+              ctx.strokeStyle = `rgba(${color}, ${opacity})`;
+              ctx.stroke();
+            }
+          }
+          prev = p;
+        }
+      }
+    };
+
+    const drawLabel = (m, p, depth, position) => {
+      const layout = computeLabelLayout(m, p, depth, position);
+      if (!layout) return;
+
+      const { text, lx, ly, bgW, bgH, r } = layout;
+      const cfg = config.current;
+      const ls = cfg.labelStyle;
+
+      roundRect(ctx, lx - bgW / 2, ly - bgH / 2, bgW, bgH, r);
+      ctx.fillStyle = `rgba(${ls.backgroundColor}, ${depth * 0.85})`;
+      ctx.fill();
+
+      ctx.fillStyle = `rgba(${ls.color}, ${depth})`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, lx, ly + 0.5);
+    };
+
+    const updateTooltipPosition = () => {
+      const el = tooltipRef.current;
+      if (!el) return;
+
+      const hit = hoveredHit.current;
+      if (!hit) {
+        el.style.opacity = "0";
+        el.style.pointerEvents = "none";
+        return;
+      }
+
+      const p = projectAt(
+        hit.marker.lat,
+        hit.marker.lon,
+        rotation.current.x,
+        rotation.current.y,
+      );
+
+      if (p.z <= -radius * 0.12) {
+        el.style.opacity = "0";
+        return;
+      }
+
+      el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -120%)`;
+      el.style.opacity = tooltipVisible ? "1" : "0";
+      el.style.pointerEvents = "none";
+    };
+
+    const findHoveredMarker = (clientX, clientY) => {
+      const cfg = config.current;
+      const rect = canvas.getBoundingClientRect();
+      const mx = clientX - rect.left;
+      const my = clientY - rect.top;
+      let best = null;
+      let bestDist = Infinity;
+
+      for (const m of cfg.markers) {
+        const p = projectAt(m.lat, m.lon, rotation.current.x, rotation.current.y);
+        if (p.z > -radius * 0.12) {
+          const dx = p.x - mx;
+          const dy = p.y - my;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const hitRadius = Math.max(m.size ?? 6.8, 10);
+          if (dist < hitRadius && dist < bestDist) {
+            bestDist = dist;
+            best = { marker: m, projected: p };
+          }
+        }
+      }
+
+      return best;
+    };
+
+    const setHovered = (hit) => {
+      const cfg = config.current;
+      const prev = hoveredHit.current?.marker ?? null;
+      const next = hit?.marker ?? null;
+      if (prev === next) return;
+
+      hoveredHit.current = hit;
+      setHoveredMarker(next);
+      if (cfg.onMarkerHover) cfg.onMarkerHover(next);
+
+      clearTimeout(tooltipTimer.current);
+      if (next && cfg.renderTooltip) {
+        tooltipTimer.current = setTimeout(() => setTooltipVisible(true), cfg.tooltipDelay);
+      } else {
+        setTooltipVisible(false);
+      }
+    };
+
+    const getMousePoint = (e) => {
+      const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+      const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+      return { clientX, clientY };
+    };
+
+    const handleMouseDown = (e) => {
+      if (!config.current.interactive) return;
+      isDragging.current = true;
+      previousMouse.current = getMousePoint(e);
+      canvas.style.cursor = "grabbing";
+    };
+
+    const normalizeRotation = (rot) => {
+      const twoPi = Math.PI * 2;
+      return {
+        x: Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rot.x)),
+        y: ((rot.y % twoPi) + twoPi) % twoPi,
+      };
+    };
+
+    const handleMouseMove = (e) => {
+      const cfg = config.current;
+      const { clientX, clientY } = getMousePoint(e);
+
+      if (isDragging.current && cfg.interactive) {
+        rotation.current.y += (clientX - previousMouse.current.clientX) * dragSpeed;
+        if (cfg.onRotationChange) {
+          cfg.onRotationChange(normalizeRotation(rotation.current));
+        }
+        previousMouse.current = { clientX, clientY };
+        return;
+      }
+
+      const hasHoverFeatures = cfg.renderTooltip || cfg.onMarkerHover || cfg.onMarkerClick;
+      if (!hasHoverFeatures) return;
+
+      const hit = findHoveredMarker(clientX, clientY);
+      setHovered(hit);
+      canvas.style.cursor = hit ? "pointer" : (cfg.interactive ? "grab" : "default");
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      canvas.style.cursor = config.current.interactive ? "grab" : "default";
+    };
+
+    const handleMouseLeave = () => {
+      isDragging.current = false;
+      isHovering.current = false;
+      setHovered(null);
+      canvas.style.cursor = config.current.interactive ? "grab" : "default";
+    };
+
+    const handleMouseEnter = () => {
+      isHovering.current = true;
+    };
+
+    const handleClick = (e) => {
+      const cfg = config.current;
+      if (!cfg.onMarkerClick) return;
+      const { clientX, clientY } = getMousePoint(e);
+      const hit = findHoveredMarker(clientX, clientY);
+      if (hit) cfg.onMarkerClick(hit.marker);
+    };
+
+    const handleWheel = (e) => {
+      const cfg = config.current;
+      if (!cfg.interactive || !cfg.enableZoom) return;
+      e.preventDefault();
+      const zoomSpeed = 0.001;
+      const newZoom = Math.min(
+        cfg.maxZoom,
+        Math.max(cfg.minZoom, zoomRef.current - e.deltaY * zoomSpeed),
+      );
+      zoomRef.current = newZoom;
+      if (cfg.onZoomChange) cfg.onZoomChange(newZoom);
+    };
+
+    canvas.addEventListener("mousedown", handleMouseDown);
+    canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("mouseup", handleMouseUp);
+    canvas.addEventListener("mouseleave", handleMouseLeave);
+    canvas.addEventListener("mouseenter", handleMouseEnter);
+    canvas.addEventListener("click", handleClick);
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    canvas.addEventListener("touchstart", handleMouseDown, { passive: true });
+    canvas.addEventListener("touchmove", handleMouseMove, { passive: true });
+    canvas.addEventListener("touchend", handleMouseUp);
+
+    let visibilityObserver = null;
+    if (config.current.pauseOnInvisible && typeof IntersectionObserver !== "undefined") {
+      visibilityObserver = new IntersectionObserver(
+        (entries) => {
+          isVisible.current = entries[0]?.isIntersecting ?? true;
+        },
+        { threshold: 0 },
+      );
+      visibilityObserver.observe(canvas);
+    }
 
     const render = () => {
       const cfg = config.current;
       ctx.clearRect(0, 0, width, height);
 
       if (!isDragging.current) {
-        rotation.current.y += cfg.autoRotateSpeed;
+        const hoverPaused = cfg.pauseOnHover && isHovering.current;
+        const invisiblePaused = cfg.pauseOnInvisible && !isVisible.current;
+        if (!hoverPaused && !invisiblePaused) {
+          rotation.current.y += cfg.autoRotateSpeed;
+        }
       }
+
+      updateRadius();
+
+      const pulsePhase = cfg.markerPulse ? (Date.now() / 1500) % 1 : 0;
 
       // Atmósfera
       if (cfg.showAtmosphere) {
@@ -137,19 +619,30 @@ export default function LandGlobe({
       ctx.fill();
 
       // Puntos de tierra
-      for (let i = 0; i < landDots.length; i++) {
-        const [lat, lon] = landDots[i];
-        const p = projectAt(lat, lon, rotation.current.x, rotation.current.y);
-        if (p.z > 0) {
-          const alpha = Math.pow(p.z / radius, 1.25) * cfg.dotOpacity;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, 0.95, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${cfg.dotColor}, ${alpha})`;
-          ctx.fill();
+      if (cfg.landStyle === "dots" || cfg.landStyle === "dots+outline") {
+        for (let i = 0; i < landDots.length; i++) {
+          const [lat, lon] = landDots[i];
+          const p = projectAt(lat, lon, rotation.current.x, rotation.current.y);
+          if (p.z > 0) {
+            const alpha = Math.pow(p.z / radius, 1.25) * cfg.dotOpacity;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 0.95, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${cfg.dotColor}, ${alpha})`;
+            ctx.fill();
+          }
         }
       }
 
+      // Contornos de tierra
+      if (cfg.landStyle === "outline" || cfg.landStyle === "dots+outline") {
+        drawOutlines(rotation.current.x, rotation.current.y);
+      }
+
+      // Arcos entre marcadores
+      drawConnections(rotation.current.x, rotation.current.y);
+
       // Marcadores
+      const visibleMarkers = [];
       for (const m of cfg.markers) {
         const p = projectAt(m.lat, m.lon, rotation.current.x, rotation.current.y);
         if (p.z > -radius * 0.12) {
@@ -171,60 +664,124 @@ export default function LandGlobe({
           ctx.arc(p.x, p.y, 1.85, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(${cfg.markerCoreColor}, ${depth})`;
           ctx.fill();
+
+          if (cfg.markerPulse) {
+            const pulseRadius = markerSize + pulsePhase * 16;
+            const pulseAlpha = (1 - pulsePhase) * 0.5;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, pulseRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(${glow}, ${pulseAlpha * depth})`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+
+          if (cfg.showLabels) {
+            visibleMarkers.push({ m, p, depth });
+          }
         }
       }
 
-      animId = requestAnimationFrame(render);
+      // Labels con anti-colisión AABB: los marcadores más al frente ganan.
+      if (visibleMarkers.length > 0) {
+        visibleMarkers.sort((a, b) => b.depth - a.depth);
+
+        const acceptedBoxes = [];
+        const positions =
+          cfg.labelPosition === "auto"
+            ? ["top", "right", "bottom", "left"]
+            : [cfg.labelPosition];
+
+        for (const { m, p, depth } of visibleMarkers) {
+          let chosen = null;
+
+          for (const pos of positions) {
+            const layout = computeLabelLayout(m, p, depth, pos);
+            if (!layout) continue;
+
+            const box = {
+              left: layout.lx - layout.bgW / 2,
+              right: layout.lx + layout.bgW / 2,
+              top: layout.ly - layout.bgH / 2,
+              bottom: layout.ly + layout.bgH / 2,
+            };
+
+            const collides = acceptedBoxes.some((b) => boxesOverlap(box, b));
+            if (!collides) {
+              chosen = { layout, position: pos, box };
+              break;
+            }
+          }
+
+          if (chosen) {
+            drawLabel(m, p, depth, chosen.position);
+            acceptedBoxes.push(chosen.box);
+          }
+        }
+      }
+
+      updateTooltipPosition();
+
+      schedule();
     };
+
+    const schedule = () => {
+      const cfg = config.current;
+      if (cfg.static) return;
+
+      if (cfg.targetFPS && cfg.targetFPS > 0) {
+        const interval = 1000 / cfg.targetFPS;
+        const elapsed = performance.now() - lastFrameTime;
+        const delay = Math.max(0, interval - elapsed);
+        timeoutId = setTimeout(() => {
+          animId = requestAnimationFrame((t) => {
+            lastFrameTime = t;
+            render();
+          });
+        }, delay);
+      } else {
+        animId = requestAnimationFrame(render);
+      }
+    };
+
+    const resume = () => {
+      cancelAnimationFrame(animId);
+      clearTimeout(timeoutId);
+      animId = undefined;
+      timeoutId = undefined;
+      schedule();
+    };
+    resumeRef.current = resume;
 
     render();
 
     return () => {
+      resumeRef.current = null;
       cancelAnimationFrame(animId);
+      clearTimeout(timeoutId);
       observer?.disconnect();
+      visibilityObserver?.disconnect();
+      clearTimeout(tooltipTimer.current);
+      canvas.removeEventListener("mousedown", handleMouseDown);
+      canvas.removeEventListener("mousemove", handleMouseMove);
+      canvas.removeEventListener("mouseup", handleMouseUp);
+      canvas.removeEventListener("mouseleave", handleMouseLeave);
+      canvas.removeEventListener("mouseenter", handleMouseEnter);
+      canvas.removeEventListener("click", handleClick);
+      canvas.removeEventListener("wheel", handleWheel);
+      canvas.removeEventListener("touchstart", handleMouseDown);
+      canvas.removeEventListener("touchmove", handleMouseMove);
+      canvas.removeEventListener("touchend", handleMouseUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Controles de arrastre (mouse + touch): solo rotación horizontal.
-  const getX = (e) => e.clientX ?? e.touches?.[0]?.clientX ?? 0;
-  const getY = (e) => e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-
-  const handleDown = (e) => {
-    isDragging.current = true;
-    previousMouse.current = { x: getX(e), y: getY(e) };
-    if (e.currentTarget) e.currentTarget.style.cursor = "grabbing";
-  };
-
-  const handleMove = (e) => {
-    if (!isDragging.current) return;
-    const clientX = getX(e);
-    rotation.current.y += (clientX - previousMouse.current.x) * dragSpeed;
-    previousMouse.current = { x: clientX, y: getY(e) };
-  };
-
-  const handleUp = (e) => {
-    isDragging.current = false;
-    if (e?.currentTarget) e.currentTarget.style.cursor = "grab";
-  };
-
-  const dragHandlers = interactive
-    ? {
-        onMouseDown: handleDown,
-        onMouseMove: handleMove,
-        onMouseUp: handleUp,
-        onMouseLeave: handleUp,
-        onTouchStart: handleDown,
-        onTouchMove: handleMove,
-        onTouchEnd: handleUp,
-      }
-    : {};
-
   return React.createElement(
     "div",
     {
+      ref: wrapperRef,
       className,
       style: {
+        position: style?.position ?? "relative",
         width: "100%",
         maxWidth: size,
         aspectRatio: "1 / 1",
@@ -242,7 +799,27 @@ export default function LandGlobe({
         userSelect: "none",
         touchAction: "none",
       },
-      ...dragHandlers,
     }),
+    renderTooltip && hoveredMarker
+      ? React.createElement(
+          "div",
+          {
+            ref: tooltipRef,
+            style: {
+              position: "absolute",
+              left: 0,
+              top: 0,
+              opacity: 0,
+              transform: "translate(0, 0)",
+              transition: "opacity 150ms ease",
+              pointerEvents: "none",
+              zIndex: 10,
+            },
+          },
+          renderTooltip(hoveredMarker),
+        )
+      : null,
   );
-}
+});
+
+export default LandGlobe;

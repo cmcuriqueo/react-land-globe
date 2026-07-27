@@ -4,6 +4,7 @@ import React from "react";
 import { renderToString } from "react-dom/server";
 import LandGlobe from "../src/index.js";
 import landDots from "../src/land-dots.js";
+import landOutlines from "../src/land-outlines.js";
 
 describe("land-dots (datos de tierra)", () => {
   it("tiene 5617 puntos", () => {
@@ -16,6 +17,29 @@ describe("land-dots (datos de tierra)", () => {
       expect(lat).toBeLessThanOrEqual(90);
       expect(lon).toBeGreaterThanOrEqual(-180);
       expect(lon).toBeLessThanOrEqual(180);
+    }
+  });
+});
+
+describe("land-outlines (contornos de tierra)", () => {
+  it("tiene anillos de contorno", () => {
+    expect(landOutlines.length).toBeGreaterThan(0);
+  });
+
+  it("cada anillo es un array cerrado de coordenadas [lat, lon]", () => {
+    for (const ring of landOutlines) {
+      expect(ring.length).toBeGreaterThanOrEqual(3);
+      const first = ring[0];
+      const last = ring[ring.length - 1];
+      expect(first[0]).toBe(last[0]);
+      const lonDiff = Math.abs(first[1] - last[1]);
+      expect(lonDiff === 0 || lonDiff === 360).toBe(true);
+      for (const [lat, lon] of ring) {
+        expect(lat).toBeGreaterThanOrEqual(-90);
+        expect(lat).toBeLessThanOrEqual(90);
+        expect(lon).toBeGreaterThanOrEqual(-180);
+        expect(lon).toBeLessThanOrEqual(180);
+      }
     }
   });
 });
