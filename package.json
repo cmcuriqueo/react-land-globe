@@ -2,6 +2,7 @@
   "name": "react-land-globe",
   "version": "0.2.0",
   "description": "Globo terráqueo interactivo en canvas para React: continentes punteados, rotación automática, marcadores con glow y arrastre. Cero dependencias, SSR-safe.",
+  "homepage": "https://react-land-globe.curiqueocesar.net/",
   "type": "module",
   "main": "./src/index.js",
   "exports": {

@@ -8,6 +8,8 @@ An interactive **canvas globe** for React: dotted or outlined continents (5,617 
 
 ![react-land-globe](./docs/globe.png)
 
+🚀 **[Try the live playground demo](https://react-land-globe.curiqueocesar.net/)**
+
 - **Zero dependencies** — only `react` as a peer dependency
 - **No build step** — plain ESM, works out of the box with Vite, Next.js, Astro and CRA
 - **SSR-safe** — nothing touches the DOM until `useEffect` (safe for Next.js and Astro islands)
