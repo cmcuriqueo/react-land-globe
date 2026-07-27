@@ -75,8 +75,8 @@ const LandGlobe = React.forwardRef(function LandGlobe({
   size = 520,
   autoRotateSpeed = 0.0026,
   dragSpeed = 0.005,
-  centerAnimationSpeed = 0.08,
   pauseOnHover = false,
+  enableZoom = true,
   pauseOnInvisible = false,
   static: staticMode = false,
   targetFPS,
@@ -88,8 +88,6 @@ const LandGlobe = React.forwardRef(function LandGlobe({
   outlineColor = "255, 255, 255",
   outlineOpacity = 0.75,
   outlineWidth = 1,
-  fillColor = "255, 255, 255",
-  fillOpacity = 0.15,
   markerColor = "220, 38, 38",
   markerGlowColor = "239, 68, 68",
   markerCoreColor = "255, 255, 255",
@@ -126,7 +124,6 @@ const LandGlobe = React.forwardRef(function LandGlobe({
   const isVisible = useRef(true);
   const previousMouse = useRef({ x: 0, y: 0 });
   const rotation = useRef({ x: initialRotation.x, y: initialRotation.y });
-  const targetRotation = useRef(null);
   const resumeRef = useRef(null);
   const zoomRef = useRef(zoom);
   const hoveredHit = useRef(null);
@@ -151,9 +148,9 @@ const LandGlobe = React.forwardRef(function LandGlobe({
   config.current = {
     markers,
     autoRotateSpeed,
-    centerAnimationSpeed,
     pauseOnHover,
     pauseOnInvisible,
+    enableZoom,
     static: staticMode,
     targetFPS,
     landStyle,
@@ -162,8 +159,6 @@ const LandGlobe = React.forwardRef(function LandGlobe({
     outlineColor,
     outlineOpacity,
     outlineWidth,
-    fillColor,
-    fillOpacity,
     markerColor,
     markerGlowColor,
     markerCoreColor,
@@ -191,50 +186,7 @@ const LandGlobe = React.forwardRef(function LandGlobe({
     interactive,
   };
 
-  const rotationForMarker = (m) => {
-    const phi = (m.lat * Math.PI) / 180;
-    const theta = (-m.lon * Math.PI) / 180;
-    const x = Math.cos(phi) * Math.cos(theta);
-    const y = Math.sin(phi);
-    const z = Math.cos(phi) * Math.sin(theta);
-    return {
-      x: -Math.asin(y),
-      y: Math.PI / 2 - Math.atan2(z, x),
-    };
-  };
-
-  const rotationForMarkers = (ms) => {
-    if (!ms || ms.length === 0) return null;
-    if (ms.length === 1) return rotationForMarker(ms[0]);
-    let x = 0;
-    let y = 0;
-    let z = 0;
-    for (const m of ms) {
-      const phi = (m.lat * Math.PI) / 180;
-      const theta = (-m.lon * Math.PI) / 180;
-      x += Math.cos(phi) * Math.cos(theta);
-      y += Math.sin(phi);
-      z += Math.cos(phi) * Math.sin(theta);
-    }
-    const len = Math.sqrt(x * x + y * y + z * z);
-    if (len < 1e-6) return null;
-    x /= len;
-    y /= len;
-    z /= len;
-    return {
-      x: -Math.asin(y),
-      y: Math.PI / 2 - Math.atan2(z, x),
-    };
-  };
-
   useImperativeHandle(ref, () => ({
-    centerOn: (marker) => {
-      if (!marker) return;
-      targetRotation.current = rotationForMarker(marker);
-    },
-    centerOnMarkers: (markerList) => {
-      targetRotation.current = rotationForMarkers(markerList);
-    },
     getRotation: () => ({ ...rotation.current }),
     toDataURL: (type, quality) => canvasRef.current?.toDataURL(type, quality) ?? null,
   }));
@@ -349,75 +301,6 @@ const LandGlobe = React.forwardRef(function LandGlobe({
       }
 
       return { text, lx, ly, bgW, bgH, r };
-    };
-
-    const drawFill = (rotX, rotY) => {
-      const cfg = config.current;
-      ctx.fillStyle = `rgba(${cfg.fillColor}, ${cfg.fillOpacity})`;
-
-      // Proyección a 3D rotado (sin centrar en pantalla). Usamos z > 0 como
-      // hemisferio visible.
-      const toRotated3D = (lat, lon) => {
-        const phi = (lat * Math.PI) / 180;
-        const theta = (-lon * Math.PI) / 180;
-        const x = Math.cos(phi) * Math.cos(theta);
-        const y = Math.sin(phi);
-        const z = Math.cos(phi) * Math.sin(theta);
-
-        const x1 = x * Math.cos(rotY) - z * Math.sin(rotY);
-        const z1 = x * Math.sin(rotY) + z * Math.cos(rotY);
-
-        const y2 = y * Math.cos(rotX) - z1 * Math.sin(rotX);
-        const z2 = y * Math.sin(rotX) + z1 * Math.cos(rotX);
-
-        return { x: x1 * radius, y: y2 * radius, z: z2 * radius };
-      };
-
-      for (const ring of landOutlines) {
-        const n = ring.length - 1; // ignorar punto final duplicado
-        if (n < 3) continue;
-
-        const clipped = [];
-
-        for (let i = 0; i < n; i++) {
-          const [lat1, lon1] = ring[i];
-          const [lat2, lon2] = ring[(i + 1) % n];
-          const p1 = toRotated3D(lat1, lon1);
-          const p2 = toRotated3D(lat2, lon2);
-
-          const v1 = p1.z > 0;
-          const v2 = p2.z > 0;
-
-          if (v1 && v2) {
-            clipped.push(p2);
-          } else if (v1 && !v2) {
-            const t = p1.z / (p1.z - p2.z);
-            clipped.push({
-              x: p1.x + (p2.x - p1.x) * t,
-              y: p1.y + (p2.y - p1.y) * t,
-              z: 0,
-            });
-          } else if (!v1 && v2) {
-            const t = p1.z / (p1.z - p2.z);
-            clipped.push({
-              x: p1.x + (p2.x - p1.x) * t,
-              y: p1.y + (p2.y - p1.y) * t,
-              z: 0,
-            });
-            clipped.push(p2);
-          }
-        }
-
-        if (clipped.length < 3) continue;
-
-        ctx.beginPath();
-        ctx.moveTo(centerX + clipped[0].x, centerY - clipped[0].y);
-        for (let i = 1; i < clipped.length; i++) {
-          ctx.lineTo(centerX + clipped[i].x, centerY - clipped[i].y);
-        }
-        ctx.closePath();
-        ctx.fill();
-      }
     };
 
     const drawConnections = (rotX, rotY) => {
@@ -661,7 +544,7 @@ const LandGlobe = React.forwardRef(function LandGlobe({
 
     const handleWheel = (e) => {
       const cfg = config.current;
-      if (!cfg.interactive) return;
+      if (!cfg.interactive || !cfg.enableZoom) return;
       e.preventDefault();
       const zoomSpeed = 0.001;
       const newZoom = Math.min(
@@ -698,25 +581,7 @@ const LandGlobe = React.forwardRef(function LandGlobe({
       const cfg = config.current;
       ctx.clearRect(0, 0, width, height);
 
-      if (targetRotation.current) {
-        const t = cfg.centerAnimationSpeed;
-        // Elegir el camino más corto en y atravesando el borde ±π.
-        let dy = targetRotation.current.y - rotation.current.y;
-        while (dy > Math.PI) dy -= 2 * Math.PI;
-        while (dy < -Math.PI) dy += 2 * Math.PI;
-
-        rotation.current.x += (targetRotation.current.x - rotation.current.x) * t;
-        rotation.current.y += dy * t;
-
-        if (
-          Math.abs(targetRotation.current.x - rotation.current.x) < 0.001 &&
-          Math.abs(dy) < 0.001
-        ) {
-          rotation.current.x = targetRotation.current.x;
-          rotation.current.y = targetRotation.current.y;
-          targetRotation.current = null;
-        }
-      } else if (!isDragging.current) {
+      if (!isDragging.current) {
         const hoverPaused = cfg.pauseOnHover && isHovering.current;
         const invisiblePaused = cfg.pauseOnInvisible && !isVisible.current;
         if (!hoverPaused && !invisiblePaused) {
@@ -752,11 +617,6 @@ const LandGlobe = React.forwardRef(function LandGlobe({
       ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
       ctx.fillStyle = bg;
       ctx.fill();
-
-      // Relleno de continentes
-      if (cfg.landStyle === "fill") {
-        drawFill(rotation.current.x, rotation.current.y);
-      }
 
       // Puntos de tierra
       if (cfg.landStyle === "dots" || cfg.landStyle === "dots+outline") {

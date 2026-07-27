@@ -254,14 +254,6 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     expect(onClick).toHaveBeenCalledWith(expect.objectContaining({ name: "Test" }));
   });
 
-  it("con landStyle='fill' dibuja polígonos rellenos", async () => {
-    render(<LandGlobe landStyle="fill" fillColor="100, 150, 200" fillOpacity={0.15} />);
-    await waitFrames();
-    const stringFills = ctx.fillStyles.filter((s) => typeof s === "string");
-    expect(stringFills.some((s) => s.includes("rgba(100, 150, 200, 0.15)"))).toBe(true);
-    const dotArcs = ctx.arc.mock.calls.filter((c) => c[2] === 0.95);
-    expect(dotArcs.length).toBe(0);
-  });
 
   it("el arrastre vertical no cambia la inclinación (solo horizontal)", async () => {
     const ref = React.createRef();
@@ -318,6 +310,23 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     fireEvent.wheel(canvas, { deltaY: -100 });
     expect(onZoomChange).toHaveBeenCalled();
     expect(onZoomChange.mock.calls[0][0]).toBeGreaterThan(1);
+  });
+
+  it("no hace zoom cuando enableZoom=false", async () => {
+    const onZoomChange = vi.fn();
+    const { container } = render(
+      <LandGlobe
+        markers={[{ lat: 0, lon: 0, name: "Test" }]}
+        initialRotation={{ x: 0, y: Math.PI / 2 }}
+        onZoomChange={onZoomChange}
+        enableZoom={false}
+      />,
+    );
+    const canvas = container.querySelector("canvas");
+    await waitFrames();
+
+    fireEvent.wheel(canvas, { deltaY: -100 });
+    expect(onZoomChange).not.toHaveBeenCalled();
   });
 
   it("dibuja anillos de pulso cuando markerPulse=true", async () => {
@@ -468,51 +477,4 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     expect(drawnTexts.has("B")).toBe(true);
   });
 
-  it("expone ref para centrar la vista en un marcador", async () => {
-    const ref = React.createRef();
-    render(
-      <LandGlobe
-        ref={ref}
-        markers={[{ lat: 0, lon: 0, name: "Test" }]}
-        initialRotation={{ x: 0, y: 0 }}
-        autoRotateSpeed={0}
-      />,
-    );
-    await waitFrames();
-
-    const before = ref.current.getRotation();
-    ref.current.centerOn({ lat: 40, lon: 45 });
-    await waitFrames(250);
-    const after = ref.current.getRotation();
-
-    expect(Math.abs(after.x - before.x)).toBeGreaterThan(0.3);
-    expect(Math.abs(after.y - before.y)).toBeGreaterThan(0.3);
-  });
-
-  it("expone ref para centrar la vista en un grupo de marcadores", async () => {
-    const ref = React.createRef();
-    render(
-      <LandGlobe
-        ref={ref}
-        markers={[
-          { lat: 40, lon: -60, name: "A" },
-          { lat: 30, lon: -80, name: "B" },
-        ]}
-        initialRotation={{ x: 0, y: 0 }}
-        autoRotateSpeed={0}
-      />,
-    );
-    await waitFrames();
-
-    const before = ref.current.getRotation();
-    ref.current.centerOnMarkers([
-      { lat: 40, lon: -60 },
-      { lat: 30, lon: -80 },
-    ]);
-    await waitFrames(250);
-    const after = ref.current.getRotation();
-
-    expect(Math.abs(after.x - before.x)).toBeGreaterThan(0.3);
-    expect(Math.abs(after.y - before.y)).toBeGreaterThan(0.1);
-  });
 });

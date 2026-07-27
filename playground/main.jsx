@@ -60,6 +60,7 @@ function Playground() {
   const [dotOpacity, setDotOpacity] = useState(0.55);
   const [size, setSize] = useState(520);
   const [interactive, setInteractive] = useState(true);
+  const [enableZoom, setZoomEnabled] = useState(true);
   const [dotColor, setDotColor] = useState("#ffffff");
   const [markerColor, setMarkerColor] = useState("#dc2626");
   const [markerPulse, setMarkerPulse] = useState(false);
@@ -70,7 +71,6 @@ function Playground() {
   const [targetFPS, setTargetFPS] = useState(0);
   const [landStyle, setLandStyle] = useState("dots");
   const [outlineOpacity, setOutlineOpacity] = useState(0.75);
-  const [fillOpacity, setFillOpacity] = useState(0.15);
   const [zoom, setZoom] = useState(1);
   const [showLabels, setShowLabels] = useState(false);
   const [labelPosition, setLabelPosition] = useState("top");
@@ -98,282 +98,281 @@ function Playground() {
     applyMarkers(text);
   };
 
+  const selectStyle = {
+    width: "100%",
+    background: "#000",
+    color: "#ddd",
+    border: "1px solid #333",
+    borderRadius: 6,
+    padding: "6px 8px",
+  };
+
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) 340px",
-        gap: 32,
-        maxWidth: 1100,
-        margin: "0 auto",
-        padding: "32px 24px",
-        alignItems: "start",
-      }}
-    >
-      <div>
-        <h1 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 24px" }}>
-          react-land-globe <span style={{ opacity: 0.5, fontWeight: 400 }}>playground</span>
-        </h1>
-        <LandGlobe
-          ref={globeRef}
-          markers={markers}
-          autoRotateSpeed={autoRotateSpeed}
-          dotOpacity={dotOpacity}
-          size={size}
-          interactive={interactive}
-          dotColor={hexToRgb(dotColor)}
-          markerColor={hexToRgb(markerColor)}
-          markerPulse={markerPulse}
-          connections={showConnections ? DEMO_CONNECTIONS : []}
-          pauseOnHover={pauseOnHover}
-          pauseOnInvisible={pauseOnInvisible}
-          static={staticMode}
-          targetFPS={targetFPS || undefined}
-          zoom={zoom}
-          minZoom={0.5}
-          maxZoom={2.5}
-          onZoomChange={setZoom}
-          landStyle={landStyle}
-          outlineOpacity={outlineOpacity}
-          fillOpacity={fillOpacity}
-          showLabels={showLabels}
-          labelPosition={labelPosition}
-          renderTooltip={
-            showTooltip
-              ? (m) => (
-                  <div
-                    style={{
-                      background: "rgba(0, 0, 0, 0.85)",
-                      color: "#fff",
-                      padding: "6px 10px",
-                      borderRadius: 6,
-                      fontSize: 13,
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {m.name}
-                  </div>
-                )
-              : undefined
+    <>
+      <style>{`
+        .playground {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 340px;
+          gap: 32px;
+          max-width: 1100px;
+          margin: 0 auto;
+          padding: 32px 24px;
+          align-items: start;
+        }
+        .playground-globe {
+          min-width: 0;
+        }
+        .playground-controls {
+          background: #111;
+          border-radius: 12px;
+          padding: 20px;
+          font-size: 14px;
+        }
+        .playground-toggles {
+          columns: 2;
+          column-gap: 16px;
+        }
+        .playground-toggles > * {
+          break-inside: avoid;
+        }
+        .playground-buttons {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-top: 16px;
+        }
+        @media (max-width: 900px) {
+          .playground {
+            grid-template-columns: 1fr;
+            gap: 24px;
+            padding: 20px 16px;
           }
-          onMarkerClick={(m) => console.log("click:", m.name)}
-        />
-        <p style={{ textAlign: "center", fontSize: 12, opacity: 0.4 }}>
-          Arrastrá el globo para rotarlo
-        </p>
-      </div>
-
-      <div style={{ background: "#111", borderRadius: 12, padding: 20, fontSize: 14 }}>
-        <Control label={`autoRotateSpeed`} value={autoRotateSpeed.toFixed(4)}>
-          <input
-            type="range" min="0" max="0.01" step="0.0002" value={autoRotateSpeed}
-            onChange={(e) => setAutoRotateSpeed(Number(e.target.value))}
-            style={{ width: "100%" }}
+          .playground-toggles {
+            columns: 1;
+          }
+        }
+      `}</style>
+      <div className="playground">
+        <div className="playground-globe">
+          <h1 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 24px" }}>
+            react-land-globe <span style={{ opacity: 0.5, fontWeight: 400 }}>playground</span>
+          </h1>
+          <LandGlobe
+            ref={globeRef}
+            markers={markers}
+            autoRotateSpeed={autoRotateSpeed}
+            dotOpacity={dotOpacity}
+            size={size}
+            interactive={interactive}
+            enableZoom={enableZoom}
+            dotColor={hexToRgb(dotColor)}
+            markerColor={hexToRgb(markerColor)}
+            markerPulse={markerPulse}
+            connections={showConnections ? DEMO_CONNECTIONS : []}
+            pauseOnHover={pauseOnHover}
+            pauseOnInvisible={pauseOnInvisible}
+            static={staticMode}
+            targetFPS={targetFPS || undefined}
+            zoom={zoom}
+            minZoom={0.5}
+            maxZoom={2.5}
+            onZoomChange={setZoom}
+            landStyle={landStyle}
+            outlineOpacity={outlineOpacity}
+            showLabels={showLabels}
+            labelPosition={labelPosition}
+            renderTooltip={
+              showTooltip
+                ? (m) => (
+                    <div
+                      style={{
+                        background: "rgba(0, 0, 0, 0.85)",
+                        color: "#fff",
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        fontSize: 13,
+                        border: "1px solid rgba(255,255,255,0.15)",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {m.name}
+                    </div>
+                  )
+                : undefined
+            }
+            onMarkerClick={(m) => console.log("click:", m.name)}
           />
-        </Control>
-
-        <Control label="dotOpacity" value={dotOpacity.toFixed(2)}>
-          <input
-            type="range" min="0" max="1" step="0.05" value={dotOpacity}
-            onChange={(e) => setDotOpacity(Number(e.target.value))}
-            style={{ width: "100%" }}
-          />
-        </Control>
-
-        <Control label="landStyle" value={landStyle}>
-          <select
-            value={landStyle}
-            onChange={(e) => setLandStyle(e.target.value)}
-            style={{ width: "100%", background: "#000", color: "#ddd", border: "1px solid #333", borderRadius: 6, padding: "6px 8px" }}
-          >
-            <option value="dots">dots</option>
-            <option value="outline">outline</option>
-            <option value="dots+outline">dots+outline</option>
-          </select>
-        </Control>
-
-        <Control label="outlineOpacity" value={outlineOpacity.toFixed(2)}>
-          <input
-            type="range" min="0" max="1" step="0.05" value={outlineOpacity}
-            onChange={(e) => setOutlineOpacity(Number(e.target.value))}
-            style={{ width: "100%" }}
-          />
-        </Control>
-
-        <Control label="fillOpacity" value={fillOpacity.toFixed(2)}>
-          <input
-            type="range" min="0" max="1" step="0.05" value={fillOpacity}
-            onChange={(e) => setFillOpacity(Number(e.target.value))}
-            style={{ width: "100%" }}
-          />
-        </Control>
-
-        <Control label="markerPulse" value={markerPulse ? "on" : "off"}>
-          <input
-            type="checkbox" checked={markerPulse}
-            onChange={(e) => setMarkerPulse(e.target.checked)}
-          />
-        </Control>
-
-        <Control label="connections" value={showConnections ? "on" : "off"}>
-          <input
-            type="checkbox" checked={showConnections}
-            onChange={(e) => setShowConnections(e.target.checked)}
-          />
-        </Control>
-
-        <Control label="pauseOnHover" value={pauseOnHover ? "on" : "off"}>
-          <input
-            type="checkbox" checked={pauseOnHover}
-            onChange={(e) => setPauseOnHover(e.target.checked)}
-          />
-        </Control>
-
-        <Control label="pauseOnInvisible" value={pauseOnInvisible ? "on" : "off"}>
-          <input
-            type="checkbox" checked={pauseOnInvisible}
-            onChange={(e) => setPauseOnInvisible(e.target.checked)}
-          />
-        </Control>
-
-        <Control label="static" value={staticMode ? "on" : "off"}>
-          <input
-            type="checkbox" checked={staticMode}
-            onChange={(e) => setStaticMode(e.target.checked)}
-          />
-        </Control>
-
-        <Control label="targetFPS" value={targetFPS > 0 ? targetFPS : "unlimited"}>
-          <input
-            type="range" min="0" max="60" step="5" value={targetFPS}
-            onChange={(e) => setTargetFPS(Number(e.target.value))}
-            style={{ width: "100%" }}
-          />
-        </Control>
-
-        <Control label="zoom" value={zoom.toFixed(2)}>
-          <input
-            type="range" min="0.5" max="2.5" step="0.1" value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            style={{ width: "100%" }}
-          />
-        </Control>
-
-        <Control label="showLabels" value={showLabels ? "on" : "off"}>
-          <input
-            type="checkbox" checked={showLabels}
-            onChange={(e) => setShowLabels(e.target.checked)}
-          />
-        </Control>
-
-        <Control label="labelPosition" value={labelPosition}>
-          <select
-            value={labelPosition}
-            onChange={(e) => setLabelPosition(e.target.value)}
-            style={{ width: "100%", background: "#000", color: "#ddd", border: "1px solid #333", borderRadius: 6, padding: "6px 8px" }}
-          >
-            <option value="top">top</option>
-            <option value="right">right</option>
-            <option value="bottom">bottom</option>
-            <option value="left">left</option>
-          </select>
-        </Control>
-
-        <Control label="tooltip" value={showTooltip ? "on" : "off"}>
-          <input
-            type="checkbox" checked={showTooltip}
-            onChange={(e) => setShowTooltip(e.target.checked)}
-          />
-        </Control>
-
-        <Control label="size" value={`${size}px`}>
-          <input
-            type="range" min="200" max="800" step="20" value={size}
-            onChange={(e) => setSize(Number(e.target.value))}
-            style={{ width: "100%" }}
-          />
-        </Control>
-
-        <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
-          <label style={{ fontSize: 13 }}>
-            dotColor{" "}
-            <input type="color" value={dotColor} onChange={(e) => setDotColor(e.target.value)} />
-          </label>
-          <label style={{ fontSize: 13 }}>
-            markerColor{" "}
-            <input type="color" value={markerColor} onChange={(e) => setMarkerColor(e.target.value)} />
-          </label>
-          <label style={{ fontSize: 13 }}>
-            interactive{" "}
-            <input type="checkbox" checked={interactive} onChange={(e) => setInteractive(e.target.checked)} />
-          </label>
-        </div>
-
-        <Control label="markers (JSON)">
-          <textarea
-            value={markersText}
-            onChange={(e) => setMarkersText(e.target.value)}
-            spellCheck={false}
-            style={{
-              width: "100%", height: 220, background: "#000", color: "#ddd",
-              border: "1px solid #333", borderRadius: 8, padding: 8,
-              fontFamily: "ui-monospace, monospace", fontSize: 11, resize: "vertical",
-            }}
-          />
-        </Control>
-
-        {markersError && (
-          <p style={{ color: "#f87171", fontSize: 12, margin: "0 0 12px" }}>
-            JSON inválido: {markersError}
+          <p style={{ textAlign: "center", fontSize: 12, opacity: 0.4 }}>
+            Arrastrá el globo para rotarlo
           </p>
-        )}
-
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={() => applyMarkers(markersText)} style={btnStyle("#dc2626")}>
-            Aplicar
-          </button>
-          <button onClick={() => loadPreset(DEFAULT_MARKERS)} style={btnStyle("#333")}>
-            LatAm
-          </button>
-          <button onClick={() => loadPreset(WORLD_CAPITALS)} style={btnStyle("#333")}>
-            Capitales
-          </button>
-          <button onClick={() => loadPreset([])} style={btnStyle("#333")}>
-            Sin marcadores
-          </button>
         </div>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-          <button
-            onClick={() => globeRef.current?.centerOn({ lat: 35.68, lon: 139.69 })}
-            style={btnStyle("#2563eb")}
-          >
-            Centrar Tokio
-          </button>
-          <button
-            onClick={() => globeRef.current?.centerOnMarkers(markers)}
-            style={btnStyle("#2563eb")}
-          >
-            Centrar todos
-          </button>
-          <button
-            onClick={() => {
-              const url = globeRef.current?.toDataURL();
-              if (url) {
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "globe.png";
-                a.click();
-              }
-            }}
-            style={btnStyle("#059669")}
-          >
-            Exportar imagen
-          </button>
+        <div className="playground-controls">
+          <Control label="landStyle" value={landStyle}>
+            <select value={landStyle} onChange={(e) => setLandStyle(e.target.value)} style={selectStyle}>
+              <option value="dots">dots</option>
+              <option value="outline">outline</option>
+              <option value="dots+outline">dots+outline</option>
+            </select>
+          </Control>
+
+          <Control label="dotOpacity" value={dotOpacity.toFixed(2)}>
+            <input
+              type="range" min="0" max="1" step="0.05" value={dotOpacity}
+              onChange={(e) => setDotOpacity(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </Control>
+
+          <Control label="outlineOpacity" value={outlineOpacity.toFixed(2)}>
+            <input
+              type="range" min="0" max="1" step="0.05" value={outlineOpacity}
+              onChange={(e) => setOutlineOpacity(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </Control>
+
+          <Control label={`autoRotateSpeed`} value={autoRotateSpeed.toFixed(4)}>
+            <input
+              type="range" min="0" max="0.01" step="0.0002" value={autoRotateSpeed}
+              onChange={(e) => setAutoRotateSpeed(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </Control>
+
+          <Control label="zoom" value={zoom.toFixed(2)}>
+            <input
+              type="range" min="0.5" max="2.5" step="0.1" value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </Control>
+
+          <Control label="targetFPS" value={targetFPS > 0 ? targetFPS : "unlimited"}>
+            <input
+              type="range" min="0" max="60" step="5" value={targetFPS}
+              onChange={(e) => setTargetFPS(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </Control>
+
+          <Control label="labelPosition" value={labelPosition}>
+            <select value={labelPosition} onChange={(e) => setLabelPosition(e.target.value)} style={selectStyle}>
+              <option value="top">top</option>
+              <option value="right">right</option>
+              <option value="bottom">bottom</option>
+              <option value="left">left</option>
+              <option value="auto">auto</option>
+            </select>
+          </Control>
+
+          <div className="playground-toggles">
+            <Control label="markerPulse" value={markerPulse ? "on" : "off"}>
+              <input type="checkbox" checked={markerPulse} onChange={(e) => setMarkerPulse(e.target.checked)} />
+            </Control>
+
+            <Control label="connections" value={showConnections ? "on" : "off"}>
+              <input type="checkbox" checked={showConnections} onChange={(e) => setShowConnections(e.target.checked)} />
+            </Control>
+
+            <Control label="pauseOnHover" value={pauseOnHover ? "on" : "off"}>
+              <input type="checkbox" checked={pauseOnHover} onChange={(e) => setPauseOnHover(e.target.checked)} />
+            </Control>
+
+            <Control label="pauseOnInvisible" value={pauseOnInvisible ? "on" : "off"}>
+              <input type="checkbox" checked={pauseOnInvisible} onChange={(e) => setPauseOnInvisible(e.target.checked)} />
+            </Control>
+
+            <Control label="static" value={staticMode ? "on" : "off"}>
+              <input type="checkbox" checked={staticMode} onChange={(e) => setStaticMode(e.target.checked)} />
+            </Control>
+
+            <Control label="showLabels" value={showLabels ? "on" : "off"}>
+              <input type="checkbox" checked={showLabels} onChange={(e) => setShowLabels(e.target.checked)} />
+            </Control>
+
+            <Control label="tooltip" value={showTooltip ? "on" : "off"}>
+              <input type="checkbox" checked={showTooltip} onChange={(e) => setShowTooltip(e.target.checked)} />
+            </Control>
+
+            <Control label="interactive" value={interactive ? "on" : "off"}>
+              <input type="checkbox" checked={interactive} onChange={(e) => setInteractive(e.target.checked)} />
+            </Control>
+
+            <Control label="enableZoom" value={enableZoom ? "on" : "off"}>
+              <input type="checkbox" checked={enableZoom} onChange={(e) => setZoomEnabled(e.target.checked)} />
+            </Control>
+          </div>
+
+          <div style={{ display: "flex", gap: 16, marginBottom: 16, marginTop: 8 }}>
+            <label style={{ fontSize: 13 }}>
+              dotColor{" "}
+              <input type="color" value={dotColor} onChange={(e) => setDotColor(e.target.value)} />
+            </label>
+            <label style={{ fontSize: 13 }}>
+              markerColor{" "}
+              <input type="color" value={markerColor} onChange={(e) => setMarkerColor(e.target.value)} />
+            </label>
+          </div>
+
+          <Control label="size" value={`${size}px`}>
+            <input
+              type="range" min="200" max="800" step="20" value={size}
+              onChange={(e) => setSize(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </Control>
+
+          <Control label="markers (JSON)">
+            <textarea
+              value={markersText}
+              onChange={(e) => setMarkersText(e.target.value)}
+              spellCheck={false}
+              style={{
+                width: "100%", height: 180, background: "#000", color: "#ddd",
+                border: "1px solid #333", borderRadius: 8, padding: 8,
+                fontFamily: "ui-monospace, monospace", fontSize: 11, resize: "vertical",
+              }}
+            />
+          </Control>
+
+          {markersError && (
+            <p style={{ color: "#f87171", fontSize: 12, margin: "0 0 12px" }}>
+              JSON inválido: {markersError}
+            </p>
+          )}
+
+          <div className="playground-buttons">
+            <button onClick={() => applyMarkers(markersText)} style={btnStyle("#dc2626")}>
+              Aplicar
+            </button>
+            <button onClick={() => loadPreset(DEFAULT_MARKERS)} style={btnStyle("#333")}>
+              LatAm
+            </button>
+            <button onClick={() => loadPreset(WORLD_CAPITALS)} style={btnStyle("#333")}>
+              Capitales
+            </button>
+            <button onClick={() => loadPreset([])} style={btnStyle("#333")}>
+              Sin marcadores
+            </button>
+            <button
+              onClick={() => {
+                const url = globeRef.current?.toDataURL();
+                if (url) {
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "globe.png";
+                  a.click();
+                }
+              }}
+              style={btnStyle("#059669")}
+            >
+              Exportar imagen
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

@@ -14,10 +14,9 @@ la iteración actual (estilos de tierra + labels + tooltips).
   (`labelPosition="auto"`) para minimizar superposiciones.
 
 ### 2. Estilos de tierra adicionales
-- `landStyle="fill"`: rellenar continentes con color sólido y opacidad baja.
-  Requiere polígonos cerrados y un algoritmo de clipping en el borde del
-  hemisferio visible.
 - `landStyle="dots+outline"` ya está implementado.
+- `landStyle="fill"` se exploró pero no se incluye en la API actual; el clipping
+  del borde del hemisferio visible requiere más trabajo para evitar artefactos.
 - Modo "night lights" / "topo" / "wireframe" como variantes futuras.
 
 ### 3. Marcadores más útiles
@@ -54,7 +53,7 @@ la iteración actual (estilos de tierra + labels + tooltips).
 
 ## Notas técnicas
 
-- Los contornos (`src/land-outlines.js`) ya están generados y listos para
-  soportar `landStyle="fill"` en una iteración futura.
+- Los contornos (`src/land-outlines.js`) ya están generados y se usan para el
+  estilo `outline`.
 - El tooltip ya es un nodo DOM posicionado absolutamente, lo que facilita
   agregar animaciones con CSS o Framer Motion más adelante.

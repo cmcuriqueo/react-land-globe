@@ -122,17 +122,14 @@ Nothing special needed — import and render.
 | `static` | `boolean` | `false` | Render a single static frame, no animation loop |
 | `targetFPS` | `number` | — | Cap the render loop FPS (e.g. `30`) |
 | `dragSpeed` | `number` | `0.005` | Horizontal drag sensitivity |
-| `centerAnimationSpeed` | `number` | `0.08` | Interpolation speed when centering on a marker via ref |
-| `interactive` | `boolean` | `true` | Enable mouse/touch drag. Only rotates horizontally; use `initialRotation` or the ref to control the vertical tilt |
+| `interactive` | `boolean` | `true` | Enable mouse/touch drag. Only rotates horizontally; use `initialRotation` or `onRotationChange` to control the vertical tilt |
 | `initialRotation` | `{ x, y }` | `{ x: 0.41, y: -0.9 }` | Initial rotation (the default centers the Americas) |
-| `landStyle` | `"dots" \| "outline" \| "dots+outline" \| "fill"` | `"dots"` | Continent rendering style |
+| `landStyle` | `"dots" \| "outline" \| "dots+outline"` | `"dots"` | Continent rendering style |
 | `dotColor` | `string` | `"255, 255, 255"` | Land dot color as an `"r, g, b"` triplet |
 | `dotOpacity` | `number` | `0.55` | Max opacity of land dots |
 | `outlineColor` | `string` | `"255, 255, 255"` | Coastline outline color as an `"r, g, b"` triplet |
 | `outlineOpacity` | `number` | `0.75` | Max opacity of coastline outlines |
 | `outlineWidth` | `number` | `1` | Outline stroke width in CSS px |
-| `fillColor` | `string` | `"255, 255, 255"` | Fill color for `landStyle="fill"` as an `"r, g, b"` triplet |
-| `fillOpacity` | `number` | `0.15` | Fill opacity for `landStyle="fill"` |
 | `markerColor` | `string` | `"220, 38, 38"` | Marker color as an `"r, g, b"` triplet |
 | `markerGlowColor` | `string` | `"239, 68, 68"` | Marker glow color |
 | `markerCoreColor` | `string` | `"255, 255, 255"` | Marker center dot color |
@@ -144,6 +141,7 @@ Nothing special needed — import and render.
 | `zoom` | `number` | `1` | Initial zoom level |
 | `minZoom` | `number` | `0.5` | Minimum zoom level |
 | `maxZoom` | `number` | `2.5` | Maximum zoom level |
+| `enableZoom` | `boolean` | `true` | Enable zoom with the mouse wheel |
 | `onZoomChange` | `(zoom) => void` | — | Called when the user zooms with the mouse wheel |
 | `onRotationChange` | `({ x, y }) => void` | — | Called while dragging. Receives normalized rotation in radians |
 | `backgroundStops` | `[number, string][]` | grey → black gradient | Radial gradient stops: `[position 0-1, CSS color]` |
@@ -174,7 +172,7 @@ interface GlobeConnection {
 
 ### Imperative ref
 
-The component accepts a ref that exposes methods to control the camera programmatically:
+The component accepts a ref that exposes read-only and export helpers:
 
 ```jsx
 import { useRef } from "react";
@@ -186,11 +184,14 @@ function App() {
   return (
     <>
       <LandGlobe ref={globeRef} />
-      <button onClick={() => globeRef.current?.centerOn({ lat: 35.68, lon: 139.69 })}>
-        Center on Tokyo
+      <button onClick={() => console.log(globeRef.current?.getRotation())}>
+        Get rotation
       </button>
-      <button onClick={() => globeRef.current?.centerOnMarkers(markers)}>
-        Fit all markers
+      <button onClick={() => {
+        const url = globeRef.current?.toDataURL();
+        // download or preview the exported image
+      }}>
+        Export image
       </button>
     </>
   );
@@ -199,8 +200,6 @@ function App() {
 
 | Method | Signature | Description |
 | --- | --- | --- |
-| `centerOn` | `(marker: GlobeMarker) => void` | Smoothly rotate so the marker faces the viewer |
-| `centerOnMarkers` | `(markers: GlobeMarker[]) => void` | Rotate to the centroid of a group of markers |
 | `getRotation` | `() => { x, y }` | Current rotation in radians |
 | `toDataURL` | `(type?, quality?) => string \| null` | Export the current canvas as a data URL |
 
