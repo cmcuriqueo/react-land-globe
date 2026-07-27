@@ -25,6 +25,12 @@ const WORLD_CAPITALS = [
   { lat: 6.52, lon: 3.37, name: "Lagos" },
 ];
 
+const DEMO_CONNECTIONS = [
+  { from: { lat: 40.71, lon: -74.0 }, to: { lat: 51.5, lon: -0.13 }, color: "59, 130, 246" },
+  { from: { lat: 51.5, lon: -0.13 }, to: { lat: 35.68, lon: 139.69 }, color: "239, 68, 68" },
+  { from: { lat: 35.68, lon: 139.69 }, to: { lat: -33.87, lon: 151.21 }, color: "34, 197, 94" },
+];
+
 const hexToRgb = (hex) => {
   const n = parseInt(hex.slice(1), 16);
   return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
@@ -57,6 +63,9 @@ function Playground() {
   const [dotColor, setDotColor] = useState("#ffffff");
   const [markerColor, setMarkerColor] = useState("#dc2626");
   const [markerPulse, setMarkerPulse] = useState(false);
+  const [showConnections, setShowConnections] = useState(false);
+  const [pauseOnHover, setPauseOnHover] = useState(false);
+  const [pauseOnInvisible, setPauseOnInvisible] = useState(false);
   const [landStyle, setLandStyle] = useState("dots");
   const [outlineOpacity, setOutlineOpacity] = useState(0.75);
   const [fillOpacity, setFillOpacity] = useState(0.15);
@@ -113,6 +122,9 @@ function Playground() {
           dotColor={hexToRgb(dotColor)}
           markerColor={hexToRgb(markerColor)}
           markerPulse={markerPulse}
+          connections={showConnections ? DEMO_CONNECTIONS : []}
+          pauseOnHover={pauseOnHover}
+          pauseOnInvisible={pauseOnInvisible}
           zoom={zoom}
           minZoom={0.5}
           maxZoom={2.5}
@@ -197,6 +209,27 @@ function Playground() {
           <input
             type="checkbox" checked={markerPulse}
             onChange={(e) => setMarkerPulse(e.target.checked)}
+          />
+        </Control>
+
+        <Control label="connections" value={showConnections ? "on" : "off"}>
+          <input
+            type="checkbox" checked={showConnections}
+            onChange={(e) => setShowConnections(e.target.checked)}
+          />
+        </Control>
+
+        <Control label="pauseOnHover" value={pauseOnHover ? "on" : "off"}>
+          <input
+            type="checkbox" checked={pauseOnHover}
+            onChange={(e) => setPauseOnHover(e.target.checked)}
+          />
+        </Control>
+
+        <Control label="pauseOnInvisible" value={pauseOnInvisible ? "on" : "off"}>
+          <input
+            type="checkbox" checked={pauseOnInvisible}
+            onChange={(e) => setPauseOnInvisible(e.target.checked)}
           />
         </Control>
 
