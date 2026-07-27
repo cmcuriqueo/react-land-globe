@@ -84,12 +84,28 @@ import LandGlobe from "react-land-globe";
 ```bash
 npm install
 npm run dev      # playground en http://localhost:4310
-npm test         # smoke test (SSR + datos de tierra)
 ```
 
 El playground (`playground/`) levanta el componente con un panel de controles
 para probar todos los props en vivo: marcadores en JSON, velocidad de
 rotación, colores, tamaño y arrastre. Rebuild automático al guardar.
+
+## Tests
+
+```bash
+npm test             # unit + componente + SSR (Vitest + Testing Library)
+npm run test:e2e     # browser real: drag, editor de markers (Playwright)
+npm run test:package # validación del paquete (publint + attw)
+npm run test:all     # todo lo anterior
+```
+
+- **`test/project.test.js`** — la matemática de proyección esférica (hemisferio
+  visible, rotaciones, invariantes).
+- **`test/component.test.jsx`** — el componente en jsdom con el contexto 2D del
+  canvas mockeado: loop de render, colores, `maxPixelRatio`, drag, desmontaje.
+- **`test/ssr.test.jsx`** — `renderToString` + validez de los datos de tierra.
+- **`test/e2e/run.mjs`** — levanta el playground con un server efímero y prueba
+  el drag real y el editor de marcadores en Chromium.
 
 ## Regenerar los puntos de tierra
 

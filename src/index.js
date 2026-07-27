@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import landDots from "./land-dots.js";
+import { project } from "./project.js";
 
 // Marcadores por defecto: principales ciudades de Latinoamérica.
 const DEFAULT_MARKERS = [
@@ -97,22 +98,8 @@ export default function LandGlobe({
         : null;
     observer?.observe(canvas);
 
-    const project = (lat, lon, rotX, rotY) => {
-      const phi = (lat * Math.PI) / 180;
-      const theta = (-lon * Math.PI) / 180;
-
-      const x = radius * Math.cos(phi) * Math.cos(theta);
-      const y = radius * Math.sin(phi);
-      const z = radius * Math.cos(phi) * Math.sin(theta);
-
-      const x1 = x * Math.cos(rotY) - z * Math.sin(rotY);
-      const z1 = x * Math.sin(rotY) + z * Math.cos(rotY);
-
-      const y2 = y * Math.cos(rotX) - z1 * Math.sin(rotX);
-      const z2 = y * Math.sin(rotX) + z1 * Math.cos(rotX);
-
-      return { x: centerX + x1, y: centerY - y2, z: z2 };
-    };
+    const projectAt = (lat, lon, rotX, rotY) =>
+      project(lat, lon, rotX, rotY, radius, centerX, centerY);
 
     let animId;
 
@@ -152,7 +139,7 @@ export default function LandGlobe({
       // Puntos de tierra
       for (let i = 0; i < landDots.length; i++) {
         const [lat, lon] = landDots[i];
-        const p = project(lat, lon, rotation.current.x, rotation.current.y);
+        const p = projectAt(lat, lon, rotation.current.x, rotation.current.y);
         if (p.z > 0) {
           const alpha = Math.pow(p.z / radius, 1.25) * cfg.dotOpacity;
           ctx.beginPath();
@@ -164,7 +151,7 @@ export default function LandGlobe({
 
       // Marcadores
       for (const m of cfg.markers) {
-        const p = project(m.lat, m.lon, rotation.current.x, rotation.current.y);
+        const p = projectAt(m.lat, m.lon, rotation.current.x, rotation.current.y);
         if (p.z > -radius * 0.12) {
           const depth = Math.min(1, Math.max(0.25, (p.z + radius * 0.22) / radius));
           const color = m.color ?? cfg.markerColor;
