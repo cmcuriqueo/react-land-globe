@@ -346,6 +346,27 @@ npm run dev        # → http://localhost:4310
 Sliders for speed/opacity/size, color pickers, and a JSON editor for markers
 (with validation and presets). Rebuilds automatically on save.
 
+### Deploy to Cloudflare (Workers static assets)
+
+The playground is a static React SPA. It deploys as a Cloudflare Worker that
+serves the built assets:
+
+```bash
+npm install
+npm run build:playground      # outputs to playground/dist
+npm run deploy:playground     # requires `wrangler login`
+```
+
+`wrangler.jsonc` at the repo root tells Wrangler to serve `./playground/dist`
+with `not_found_handling: single-page-application`, so any unknown route falls
+back to `index.html`. No Worker code is required for a pure static deployment.
+
+To preview locally before deploying:
+
+```bash
+npm run preview:playground
+```
+
 ## Tests
 
 ```bash
