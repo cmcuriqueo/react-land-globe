@@ -1,0 +1,44 @@
+{
+  "name": "react-land-globe",
+  "version": "0.1.0",
+  "description": "Globo terráqueo interactivo en canvas para React: continentes punteados, rotación automática, marcadores con glow y arrastre. Cero dependencias, SSR-safe.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "scripts",
+    "data"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "generate-land-dots": "node scripts/generate-land-dots.mjs",
+    "test": "node test/smoke.test.mjs"
+  },
+  "keywords": [
+    "react",
+    "globe",
+    "canvas",
+    "earth",
+    "world",
+    "map",
+    "markers",
+    "interactive",
+    "dotted-globe",
+    "3d"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=17"
+  },
+  "devDependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  }
+}

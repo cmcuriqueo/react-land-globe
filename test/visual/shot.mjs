@@ -1,0 +1,11 @@
+import { chromium } from 'file:///C:/Users/matias/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules/playwright-core/index.mjs';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 800, height: 800 } });
+await page.goto('file:///C:/Users/matias/gac-mirror/react-land-globe/test/visual/index.html');
+await page.waitForTimeout(1500);
+await page.screenshot({ path: 'test/visual/globe.png' });
+const errors = [];
+page.on('pageerror', (e) => errors.push(e.message));
+await page.waitForTimeout(500);
+console.log('errors:', errors.length ? errors : 'none');
+await browser.close();
