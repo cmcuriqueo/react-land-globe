@@ -349,7 +349,9 @@ Sliders for speed/opacity/size, color pickers, and a JSON editor for markers
 ### Deploy to Cloudflare (Workers static assets)
 
 The playground is a static React SPA. It deploys as a Cloudflare Worker that
-serves the built assets:
+serves the built assets.
+
+#### From your terminal
 
 ```bash
 npm install
@@ -366,6 +368,22 @@ To preview locally before deploying:
 ```bash
 npm run preview:playground
 ```
+
+#### From the Cloudflare dashboard (Git integration)
+
+1. Ve a **Workers & Pages** → **Create application** → **Import a repository**.
+2. Conectá tu cuenta de GitHub y seleccioná `cmcuriqueo/react-land-globe`.
+3. Usá estos valores en **Build settings**:
+
+| Campo | Valor |
+| --- | --- |
+| **Git branch** | `feature/outline-labels-tooltips` (o la rama que quieras deployar) |
+| **Root directory** | *(vacío)* |
+| **Build command** | `npm run build:playground` |
+| **Deploy command** | `npx wrangler deploy` (default; lee `wrangler.jsonc`) |
+
+4. Guardá y deployá. Cloudflare va a instalar dependencias, correr el build y
+desplegar el Worker cada vez que hagas push a esa rama.
 
 ## Tests
 
