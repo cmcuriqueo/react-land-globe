@@ -57,6 +57,7 @@ function Playground() {
   const [markerColor, setMarkerColor] = useState("#dc2626");
   const [landStyle, setLandStyle] = useState("dots");
   const [outlineOpacity, setOutlineOpacity] = useState(0.75);
+  const [fillOpacity, setFillOpacity] = useState(0.15);
   const [showLabels, setShowLabels] = useState(false);
   const [labelPosition, setLabelPosition] = useState("top");
   const [showTooltip, setShowTooltip] = useState(false);
@@ -109,6 +110,7 @@ function Playground() {
           markerColor={hexToRgb(markerColor)}
           landStyle={landStyle}
           outlineOpacity={outlineOpacity}
+          fillOpacity={fillOpacity}
           showLabels={showLabels}
           labelPosition={labelPosition}
           renderTooltip={
@@ -163,6 +165,7 @@ function Playground() {
             <option value="dots">dots</option>
             <option value="outline">outline</option>
             <option value="dots+outline">dots+outline</option>
+            <option value="fill">fill</option>
           </select>
         </Control>
 
@@ -170,6 +173,14 @@ function Playground() {
           <input
             type="range" min="0" max="1" step="0.05" value={outlineOpacity}
             onChange={(e) => setOutlineOpacity(Number(e.target.value))}
+            style={{ width: "100%" }}
+          />
+        </Control>
+
+        <Control label="fillOpacity" value={fillOpacity.toFixed(2)}>
+          <input
+            type="range" min="0" max="1" step="0.05" value={fillOpacity}
+            onChange={(e) => setFillOpacity(Number(e.target.value))}
             style={{ width: "100%" }}
           />
         </Control>

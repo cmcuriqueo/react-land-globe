@@ -83,6 +83,8 @@ export default function LandGlobe({
   outlineColor = "255, 255, 255",
   outlineOpacity = 0.75,
   outlineWidth = 1,
+  fillColor = "255, 255, 255",
+  fillOpacity = 0.15,
   markerColor = "220, 38, 38",
   markerGlowColor = "239, 68, 68",
   markerCoreColor = "255, 255, 255",
@@ -125,6 +127,8 @@ export default function LandGlobe({
     outlineColor,
     outlineOpacity,
     outlineWidth,
+    fillColor,
+    fillOpacity,
     markerColor,
     markerGlowColor,
     markerCoreColor,
@@ -246,6 +250,65 @@ export default function LandGlobe({
       }
 
       return { text, lx, ly, bgW, bgH, r };
+    };
+
+    const drawFill = (rotX, rotY) => {
+      const cfg = config.current;
+      ctx.fillStyle = `rgba(${cfg.fillColor}, ${cfg.fillOpacity})`;
+
+      for (const ring of landOutlines) {
+        const polygons = [];
+        let current = [];
+
+        let prev = projectAt(ring[0][0], ring[0][1], rotX, rotY);
+        let prevVisible = prev.z > 0;
+
+        if (prevVisible) {
+          current.push({ x: prev.x, y: prev.y });
+        }
+
+        for (let i = 1; i < ring.length; i++) {
+          const curr = projectAt(ring[i][0], ring[i][1], rotX, rotY);
+          const currVisible = curr.z > 0;
+
+          if (prevVisible && currVisible) {
+            current.push({ x: curr.x, y: curr.y });
+          } else if (prevVisible && !currVisible) {
+            const t = prev.z / (prev.z - curr.z);
+            current.push({
+              x: prev.x + (curr.x - prev.x) * t,
+              y: prev.y + (curr.y - prev.y) * t,
+            });
+            polygons.push(current);
+            current = [];
+          } else if (!prevVisible && currVisible) {
+            const t = prev.z / (prev.z - curr.z);
+            current = [{
+              x: prev.x + (curr.x - prev.x) * t,
+              y: prev.y + (curr.y - prev.y) * t,
+            }];
+            current.push({ x: curr.x, y: curr.y });
+          }
+
+          prev = curr;
+          prevVisible = currVisible;
+        }
+
+        if (current.length > 0) {
+          polygons.push(current);
+        }
+
+        for (const poly of polygons) {
+          if (poly.length < 3) continue;
+          ctx.beginPath();
+          ctx.moveTo(poly[0].x, poly[0].y);
+          for (let i = 1; i < poly.length; i++) {
+            ctx.lineTo(poly[i].x, poly[i].y);
+          }
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
     };
 
     const drawLabel = (m, p, depth, position) => {
@@ -428,6 +491,11 @@ export default function LandGlobe({
       ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
       ctx.fillStyle = bg;
       ctx.fill();
+
+      // Relleno de continentes
+      if (cfg.landStyle === "fill") {
+        drawFill(rotation.current.x, rotation.current.y);
+      }
 
       // Puntos de tierra
       if (cfg.landStyle === "dots" || cfg.landStyle === "dots+outline") {

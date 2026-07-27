@@ -104,12 +104,14 @@ Nothing special needed — import and render.
 | `dragSpeed` | `number` | `0.005` | Drag sensitivity |
 | `interactive` | `boolean` | `true` | Enable mouse/touch drag |
 | `initialRotation` | `{ x, y }` | `{ x: 0.41, y: -0.9 }` | Initial rotation (the default centers the Americas) |
-| `landStyle` | `"dots" \| "outline" \| "dots+outline"` | `"dots"` | Continent rendering style |
+| `landStyle` | `"dots" \| "outline" \| "dots+outline" \| "fill"` | `"dots"` | Continent rendering style |
 | `dotColor` | `string` | `"255, 255, 255"` | Land dot color as an `"r, g, b"` triplet |
 | `dotOpacity` | `number` | `0.55` | Max opacity of land dots |
 | `outlineColor` | `string` | `"255, 255, 255"` | Coastline outline color as an `"r, g, b"` triplet |
 | `outlineOpacity` | `number` | `0.75` | Max opacity of coastline outlines |
 | `outlineWidth` | `number` | `1` | Outline stroke width in CSS px |
+| `fillColor` | `string` | `"255, 255, 255"` | Fill color for `landStyle="fill"` as an `"r, g, b"` triplet |
+| `fillOpacity` | `number` | `0.15` | Fill opacity for `landStyle="fill"` |
 | `markerColor` | `string` | `"220, 38, 38"` | Marker color as an `"r, g, b"` triplet |
 | `markerGlowColor` | `string` | `"239, 68, 68"` | Marker glow color |
 | `markerCoreColor` | `string` | `"255, 255, 255"` | Marker center dot color |

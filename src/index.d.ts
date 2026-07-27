@@ -46,7 +46,7 @@ export interface LandGlobeProps {
   /** Rotación inicial. Default: { x: 0.41, y: -0.9 } (centrado en América). */
   initialRotation?: { x: number; y: number };
   /** Estilo de los continentes. Default: "dots". */
-  landStyle?: "dots" | "outline" | "dots+outline";
+  landStyle?: "dots" | "outline" | "dots+outline" | "fill";
   /** Color de los puntos de tierra, triplete RGB "r, g, b". Default: "255, 255, 255". */
   dotColor?: string;
   /** Opacidad máxima de los puntos de tierra (0 a 1). Default: 0.55. */
@@ -57,6 +57,10 @@ export interface LandGlobeProps {
   outlineOpacity?: number;
   /** Grosor de línea de los contornos de tierra en px CSS. Default: 1. */
   outlineWidth?: number;
+  /** Color de relleno de los continentes con landStyle="fill", triplete RGB. Default: "255, 255, 255". */
+  fillColor?: string;
+  /** Opacidad del relleno con landStyle="fill". Default: 0.15. */
+  fillOpacity?: number;
   /** Color de los marcadores, triplete RGB. Default: "220, 38, 38". */
   markerColor?: string;
   /** Color del glow de los marcadores, triplete RGB. Default: "239, 68, 68". */

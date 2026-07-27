@@ -253,6 +253,15 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     expect(onClick).toHaveBeenCalledWith(expect.objectContaining({ name: "Test" }));
   });
 
+  it("con landStyle='fill' dibuja polígonos rellenos", async () => {
+    render(<LandGlobe landStyle="fill" fillColor="100, 150, 200" fillOpacity={0.15} />);
+    await waitFrames();
+    const stringFills = ctx.fillStyles.filter((s) => typeof s === "string");
+    expect(stringFills.some((s) => s.includes("rgba(100, 150, 200, 0.15)"))).toBe(true);
+    const dotArcs = ctx.arc.mock.calls.filter((c) => c[2] === 0.95);
+    expect(dotArcs.length).toBe(0);
+  });
+
   it("llama onMarkerHover al entrar y salir de un marcador", async () => {
     const onHover = vi.fn();
     const { container } = render(
