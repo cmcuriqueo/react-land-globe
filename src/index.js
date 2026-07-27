@@ -94,6 +94,7 @@ export default function LandGlobe({
   minZoom = 0.5,
   maxZoom = 2.5,
   onZoomChange,
+  onRotationChange,
   backgroundStops = DEFAULT_BACKGROUND,
   showAtmosphere = true,
   maxPixelRatio,
@@ -149,6 +150,7 @@ export default function LandGlobe({
     minZoom,
     maxZoom,
     onZoomChange,
+    onRotationChange,
     backgroundStops,
     showAtmosphere,
     showLabels,
@@ -552,6 +554,14 @@ export default function LandGlobe({
       canvas.style.cursor = "grabbing";
     };
 
+    const normalizeRotation = (rot) => {
+      const twoPi = Math.PI * 2;
+      return {
+        x: Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rot.x)),
+        y: ((rot.y % twoPi) + twoPi) % twoPi,
+      };
+    };
+
     const handleMouseMove = (e) => {
       const cfg = config.current;
       const { clientX, clientY } = getMousePoint(e);
@@ -560,6 +570,9 @@ export default function LandGlobe({
         rotation.current.y += (clientX - previousMouse.current.clientX) * dragSpeed;
         rotation.current.x += (clientY - previousMouse.current.clientY) * cfg.verticalDragSpeed;
         rotation.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotation.current.x));
+        if (cfg.onRotationChange) {
+          cfg.onRotationChange(normalizeRotation(rotation.current));
+        }
         previousMouse.current = { clientX, clientY };
         return;
       }

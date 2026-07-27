@@ -79,6 +79,8 @@ export interface LandGlobeProps {
   maxZoom?: number;
   /** Callback al cambiar el zoom con la rueda del mouse. */
   onZoomChange?: (zoom: number) => void;
+  /** Callback al rotar el globo con arrastre. Recibe { x, y } en radianes normalizados. */
+  onRotationChange?: (rotation: { x: number; y: number }) => void;
   /** Stops del gradiente radial de fondo: [posición 0-1, color CSS]. */
   backgroundStops?: Array<[number, string]>;
   /** Dibuja el halo de atmósfera alrededor del globo. Default: true. */

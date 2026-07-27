@@ -275,6 +275,31 @@ describe("<LandGlobe /> (jsdom + canvas mockeado)", () => {
     expect(canvas).toBeTruthy();
   });
 
+  it("llama onRotationChange durante el arrastre con ángulos normalizados", async () => {
+    const onRotationChange = vi.fn();
+    const { container } = render(
+      <LandGlobe
+        markers={[{ lat: 0, lon: 0, name: "Test" }]}
+        initialRotation={{ x: 0, y: 0 }}
+        onRotationChange={onRotationChange}
+      />,
+    );
+    const canvas = container.querySelector("canvas");
+    await waitFrames();
+
+    fireEvent.mouseDown(canvas, { clientX: 250, clientY: 250 });
+    fireEvent.mouseMove(canvas, { clientX: 350, clientY: 350 });
+    await waitFrames();
+    fireEvent.mouseUp(canvas);
+
+    expect(onRotationChange).toHaveBeenCalled();
+    const rotation = onRotationChange.mock.calls[0][0];
+    expect(rotation.x).toBeGreaterThan(0);
+    expect(rotation.x).toBeLessThanOrEqual(Math.PI / 2);
+    expect(rotation.y).toBeGreaterThan(0);
+    expect(rotation.y).toBeLessThan(Math.PI * 2);
+  });
+
   it("llama onZoomChange al hacer zoom con la rueda", async () => {
     const onZoomChange = vi.fn();
     const { container } = render(

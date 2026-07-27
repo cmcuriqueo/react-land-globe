@@ -121,6 +121,7 @@ Nothing special needed — import and render.
 | `minZoom` | `number` | `0.5` | Minimum zoom level |
 | `maxZoom` | `number` | `2.5` | Maximum zoom level |
 | `onZoomChange` | `(zoom) => void` | — | Called when the user zooms with the mouse wheel |
+| `onRotationChange` | `({ x, y }) => void` | — | Called while dragging. Receives normalized rotation in radians |
 | `backgroundStops` | `[number, string][]` | grey → black gradient | Radial gradient stops: `[position 0-1, CSS color]` |
 | `showAtmosphere` | `boolean` | `true` | Draw the atmosphere halo around the globe |
 | `maxPixelRatio` | `number` | — | Cap `devicePixelRatio` to save GPU |
