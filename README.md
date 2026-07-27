@@ -4,7 +4,7 @@
 [![license](https://img.shields.io/npm/l/react-land-globe)](./LICENSE)
 [![types](https://img.shields.io/badge/types-TypeScript-blue)](./src/index.d.ts)
 
-An interactive **canvas globe** for React: dotted continents (5,617 precomputed land points from Natural Earth), smooth auto-rotation, glowing markers, and horizontal drag with mouse & touch.
+An interactive **canvas globe** for React: dotted or outlined continents (5,617 precomputed land points and 125 coastline outlines from Natural Earth), smooth auto-rotation, glowing markers, and horizontal drag with mouse & touch.
 
 ![react-land-globe](./docs/globe.png)
 
@@ -41,6 +41,22 @@ With your own markers:
   ]}
   autoRotateSpeed={0.002}
   markerColor="227, 25, 55"
+/>
+```
+
+With labels and a custom tooltip:
+
+```jsx
+<LandGlobe
+  markers={[{ lat: -34.6, lon: -58.38, name: "Buenos Aires" }]}
+  showLabels
+  labelPosition="top"
+  renderTooltip={(marker) => (
+    <div style={{ background: "#111", padding: "6px 10px", borderRadius: 6 }}>
+      <strong>{marker.name}</strong>
+    </div>
+  )}
+  onMarkerClick={(marker) => console.log(marker.name)}
 />
 ```
 
@@ -88,14 +104,27 @@ Nothing special needed — import and render.
 | `dragSpeed` | `number` | `0.005` | Drag sensitivity |
 | `interactive` | `boolean` | `true` | Enable mouse/touch drag |
 | `initialRotation` | `{ x, y }` | `{ x: 0.41, y: -0.9 }` | Initial rotation (the default centers the Americas) |
+| `landStyle` | `"dots" \| "outline" \| "dots+outline"` | `"dots"` | Continent rendering style |
 | `dotColor` | `string` | `"255, 255, 255"` | Land dot color as an `"r, g, b"` triplet |
 | `dotOpacity` | `number` | `0.55` | Max opacity of land dots |
+| `outlineColor` | `string` | `"255, 255, 255"` | Coastline outline color as an `"r, g, b"` triplet |
+| `outlineOpacity` | `number` | `0.75` | Max opacity of coastline outlines |
+| `outlineWidth` | `number` | `1` | Outline stroke width in CSS px |
 | `markerColor` | `string` | `"220, 38, 38"` | Marker color as an `"r, g, b"` triplet |
 | `markerGlowColor` | `string` | `"239, 68, 68"` | Marker glow color |
 | `markerCoreColor` | `string` | `"255, 255, 255"` | Marker center dot color |
 | `backgroundStops` | `[number, string][]` | grey → black gradient | Radial gradient stops: `[position 0-1, CSS color]` |
 | `showAtmosphere` | `boolean` | `true` | Draw the atmosphere halo around the globe |
 | `maxPixelRatio` | `number` | — | Cap `devicePixelRatio` to save GPU |
+| `showLabels` | `boolean` | `false` | Draw marker names next to each marker |
+| `labelPosition` | `"top" \| "right" \| "bottom" \| "left"` | `"top"` | Label position relative to the marker |
+| `labelOffset` | `number` | `10` | Distance between marker and label (px) |
+| `labelStyle` | `LabelStyle` | — | Font, color, background and padding for canvas labels |
+| `labelFormatter` | `(marker) => string` | `m => m.name` | Text shown in the label |
+| `renderTooltip` | `(marker) => ReactNode` | — | HTML/React tooltip shown on hover |
+| `tooltipDelay` | `number` | `150` | Delay before showing tooltip (ms) |
+| `onMarkerClick` | `(marker) => void` | — | Click callback on a marker |
+| `onMarkerHover` | `(marker \| null) => void` | — | Hover callback (null on mouse leave) |
 | `className` / `style` | — | — | Applied to the wrapper element |
 
 ### `GlobeMarker`
@@ -126,12 +155,13 @@ const markers: GlobeMarker[] = [{ lat: 0, lon: 0, name: "Null Island" }];
 
 ## How it works
 
-The globe projects ~5,600 precomputed `(lat, lon)` land points onto a 3D sphere
-with two rotations (`x` tilt and `y` spin), discards the back hemisphere, and
-modulates each dot's opacity by its depth (`z`) to fake volume. Land points are
-generated at build time from [Natural Earth](https://www.naturalearthdata.com/)
-110m TopoJSON, so runtime cost is just canvas drawing — no geometry math on the
-client, no hydration spike.
+The globe projects ~5,600 precomputed `(lat, lon)` land points and 125 coastline
+outline rings onto a 3D sphere with two rotations (`x` tilt and `y` spin),
+discards the back hemisphere, and modulates each dot/segment's opacity by its
+depth (`z`) to fake volume. Land data is generated at build time from
+[Natural Earth](https://www.naturalearthdata.com/) 110m TopoJSON, so runtime
+cost is just canvas drawing — no geometry math on the client, no hydration
+spike.
 
 ## Playground
 
@@ -165,17 +195,17 @@ npm run test:all     # everything above
 | `test/ssr.test.jsx` | `renderToString` output + land data validity |
 | `test/e2e/run.mjs` | Self-contained Playwright run (build + ephemeral server + Chromium): load, real drag rotation, markers JSON editor |
 
-## Regenerating the land dots
+## Regenerating the land data
 
-Land points come from `data/land-110m.json` (Natural Earth 110m TopoJSON). If
-you swap the dataset or want a different sampling density:
+Land points and outlines come from `data/land-110m.json` (Natural Earth 110m
+TopoJSON). If you swap the dataset or want a different sampling density:
 
 ```bash
-npm run generate-land-dots
+npm run generate-land-data
 ```
 
-This rewrites `src/land-dots.js`. The sampling step is adjustable in
-`scripts/generate-land-dots.mjs`.
+This rewrites `src/land-dots.js` and `src/land-outlines.js`. The sampling
+parameters are adjustable in `scripts/generate-land-data.mjs`.
 
 ## Contributing
 

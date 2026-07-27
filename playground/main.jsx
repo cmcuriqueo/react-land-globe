@@ -55,6 +55,11 @@ function Playground() {
   const [interactive, setInteractive] = useState(true);
   const [dotColor, setDotColor] = useState("#ffffff");
   const [markerColor, setMarkerColor] = useState("#dc2626");
+  const [landStyle, setLandStyle] = useState("dots");
+  const [outlineOpacity, setOutlineOpacity] = useState(0.75);
+  const [showLabels, setShowLabels] = useState(false);
+  const [labelPosition, setLabelPosition] = useState("top");
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const applyMarkers = (text) => {
     try {
@@ -102,6 +107,30 @@ function Playground() {
           interactive={interactive}
           dotColor={hexToRgb(dotColor)}
           markerColor={hexToRgb(markerColor)}
+          landStyle={landStyle}
+          outlineOpacity={outlineOpacity}
+          showLabels={showLabels}
+          labelPosition={labelPosition}
+          renderTooltip={
+            showTooltip
+              ? (m) => (
+                  <div
+                    style={{
+                      background: "rgba(0, 0, 0, 0.85)",
+                      color: "#fff",
+                      padding: "6px 10px",
+                      borderRadius: 6,
+                      fontSize: 13,
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {m.name}
+                  </div>
+                )
+              : undefined
+          }
+          onMarkerClick={(m) => console.log("click:", m.name)}
         />
         <p style={{ textAlign: "center", fontSize: 12, opacity: 0.4 }}>
           Arrastrá el globo para rotarlo
@@ -122,6 +151,53 @@ function Playground() {
             type="range" min="0" max="1" step="0.05" value={dotOpacity}
             onChange={(e) => setDotOpacity(Number(e.target.value))}
             style={{ width: "100%" }}
+          />
+        </Control>
+
+        <Control label="landStyle" value={landStyle}>
+          <select
+            value={landStyle}
+            onChange={(e) => setLandStyle(e.target.value)}
+            style={{ width: "100%", background: "#000", color: "#ddd", border: "1px solid #333", borderRadius: 6, padding: "6px 8px" }}
+          >
+            <option value="dots">dots</option>
+            <option value="outline">outline</option>
+            <option value="dots+outline">dots+outline</option>
+          </select>
+        </Control>
+
+        <Control label="outlineOpacity" value={outlineOpacity.toFixed(2)}>
+          <input
+            type="range" min="0" max="1" step="0.05" value={outlineOpacity}
+            onChange={(e) => setOutlineOpacity(Number(e.target.value))}
+            style={{ width: "100%" }}
+          />
+        </Control>
+
+        <Control label="showLabels" value={showLabels ? "on" : "off"}>
+          <input
+            type="checkbox" checked={showLabels}
+            onChange={(e) => setShowLabels(e.target.checked)}
+          />
+        </Control>
+
+        <Control label="labelPosition" value={labelPosition}>
+          <select
+            value={labelPosition}
+            onChange={(e) => setLabelPosition(e.target.value)}
+            style={{ width: "100%", background: "#000", color: "#ddd", border: "1px solid #333", borderRadius: 6, padding: "6px 8px" }}
+          >
+            <option value="top">top</option>
+            <option value="right">right</option>
+            <option value="bottom">bottom</option>
+            <option value="left">left</option>
+          </select>
+        </Control>
+
+        <Control label="tooltip" value={showTooltip ? "on" : "off"}>
+          <input
+            type="checkbox" checked={showTooltip}
+            onChange={(e) => setShowTooltip(e.target.checked)}
           />
         </Control>
 

@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import landDots from "./land-dots.js";
+import landOutlines from "./land-outlines.js";
 import { project } from "./project.js";
 
 // Marcadores por defecto: principales ciudades de Latinoamérica.
@@ -21,9 +22,38 @@ const DEFAULT_BACKGROUND = [
   [1, "#000000"],
 ];
 
+const DEFAULT_LABEL_STYLE = {
+  fontSize: 12,
+  fontFamily: "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+  fontWeight: "500",
+  color: "255, 255, 255",
+  backgroundColor: "0, 0, 0",
+  padding: { x: 6, y: 2 },
+  borderRadius: 4,
+};
+
 /**
- * Globo interactivo en canvas: continentes punteados, rotación automática,
- * marcadores con glow y arrastre horizontal (mouse + touch).
+ * Dibuja un rectángulo con esquinas redondeadas en el canvas.
+ * Fallback manual para entornos sin ctx.roundRect nativo.
+ */
+function roundRect(ctx, x, y, w, h, r) {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + w - radius, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+  ctx.lineTo(x + w, y + h - radius);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+  ctx.lineTo(x + radius, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+/**
+ * Globo interactivo en canvas: continentes punteados o contornos, rotación
+ * automática, marcadores con glow, labels, tooltips y arrastre horizontal.
  *
  * Sin dependencias más allá de React. Seguro para SSR: todo el acceso al DOM
  * ocurre dentro de useEffect / event handlers.
@@ -35,21 +65,41 @@ export default function LandGlobe({
   dragSpeed = 0.005,
   interactive = true,
   initialRotation = { x: 0.41, y: -0.9 },
+  landStyle = "dots",
   dotColor = "255, 255, 255",
   dotOpacity = 0.55,
+  outlineColor = "255, 255, 255",
+  outlineOpacity = 0.75,
+  outlineWidth = 1,
   markerColor = "220, 38, 38",
   markerGlowColor = "239, 68, 68",
   markerCoreColor = "255, 255, 255",
   backgroundStops = DEFAULT_BACKGROUND,
   showAtmosphere = true,
   maxPixelRatio,
+  showLabels = false,
+  labelPosition = "top",
+  labelOffset = 10,
+  labelStyle = DEFAULT_LABEL_STYLE,
+  labelFormatter = (m) => m.name ?? "",
+  renderTooltip,
+  tooltipDelay = 150,
+  onMarkerClick,
+  onMarkerHover,
   className,
   style,
 }) {
   const canvasRef = useRef(null);
+  const wrapperRef = useRef(null);
+  const tooltipRef = useRef(null);
   const isDragging = useRef(false);
   const previousMouse = useRef({ x: 0, y: 0 });
   const rotation = useRef({ x: initialRotation.x, y: initialRotation.y });
+  const hoveredHit = useRef(null);
+  const tooltipTimer = useRef(null);
+
+  const [hoveredMarker, setHoveredMarker] = useState(null);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
 
   // Config viva: el loop de render lee siempre los props más recientes sin
   // necesidad de reiniciar el efecto en cada render del padre.
@@ -57,13 +107,27 @@ export default function LandGlobe({
   config.current = {
     markers,
     autoRotateSpeed,
+    landStyle,
     dotColor,
     dotOpacity,
+    outlineColor,
+    outlineOpacity,
+    outlineWidth,
     markerColor,
     markerGlowColor,
     markerCoreColor,
     backgroundStops,
     showAtmosphere,
+    showLabels,
+    labelPosition,
+    labelOffset,
+    labelStyle,
+    labelFormatter,
+    renderTooltip,
+    tooltipDelay,
+    onMarkerClick,
+    onMarkerHover,
+    interactive,
   };
 
   useEffect(() => {
@@ -103,6 +167,212 @@ export default function LandGlobe({
 
     let animId;
 
+    const drawOutlines = (rotX, rotY) => {
+      const cfg = config.current;
+      ctx.lineWidth = cfg.outlineWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      for (const ring of landOutlines) {
+        let prev = null;
+
+        for (let i = 0; i < ring.length; i++) {
+          const [lat, lon] = ring[i];
+          const p = projectAt(lat, lon, rotX, rotY);
+
+          if (prev && prev.z > 0 && p.z > 0) {
+            const depth = (prev.z + p.z) / 2 / radius;
+            const alpha = Math.pow(Math.max(0, depth), 1.25) * cfg.outlineOpacity;
+            ctx.beginPath();
+            ctx.moveTo(prev.x, prev.y);
+            ctx.lineTo(p.x, p.y);
+            ctx.strokeStyle = `rgba(${cfg.outlineColor}, ${alpha})`;
+            ctx.stroke();
+          }
+
+          prev = p;
+        }
+      }
+    };
+
+    const drawLabel = (m, p, depth) => {
+      const cfg = config.current;
+      const ls = cfg.labelStyle;
+      const fontSize = ls.fontSize ?? DEFAULT_LABEL_STYLE.fontSize;
+      const fontFamily = ls.fontFamily ?? DEFAULT_LABEL_STYLE.fontFamily;
+      const fontWeight = ls.fontWeight ?? DEFAULT_LABEL_STYLE.fontWeight;
+      const text = cfg.labelFormatter(m);
+      if (!text) return;
+
+      ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+      const metrics = ctx.measureText(text);
+      const pad = ls.padding ?? DEFAULT_LABEL_STYLE.padding;
+      const padX = typeof pad === "number" ? pad : (pad.x ?? 6);
+      const padY = typeof pad === "number" ? pad : (pad.y ?? 2);
+      const bgW = metrics.width + padX * 2;
+      const bgH = fontSize + padY * 2;
+      const r = ls.borderRadius ?? DEFAULT_LABEL_STYLE.borderRadius;
+      const offset = cfg.labelOffset + (m.size ?? 6.8);
+
+      let lx = p.x;
+      let ly = p.y;
+      switch (cfg.labelPosition) {
+        case "top":
+          ly -= offset + bgH / 2;
+          break;
+        case "bottom":
+          ly += offset + bgH / 2;
+          break;
+        case "left":
+          lx -= offset + bgW / 2;
+          break;
+        case "right":
+          lx += offset + bgW / 2;
+          break;
+        default:
+          ly -= offset + bgH / 2;
+      }
+
+      roundRect(ctx, lx - bgW / 2, ly - bgH / 2, bgW, bgH, r);
+      ctx.fillStyle = `rgba(${ls.backgroundColor}, ${depth * 0.85})`;
+      ctx.fill();
+
+      ctx.fillStyle = `rgba(${ls.color}, ${depth})`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, lx, ly + 0.5);
+    };
+
+    const updateTooltipPosition = () => {
+      const el = tooltipRef.current;
+      if (!el) return;
+
+      const hit = hoveredHit.current;
+      if (!hit) {
+        el.style.opacity = "0";
+        el.style.pointerEvents = "none";
+        return;
+      }
+
+      const p = projectAt(
+        hit.marker.lat,
+        hit.marker.lon,
+        rotation.current.x,
+        rotation.current.y,
+      );
+
+      if (p.z <= -radius * 0.12) {
+        el.style.opacity = "0";
+        return;
+      }
+
+      el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -120%)`;
+      el.style.opacity = tooltipVisible ? "1" : "0";
+      el.style.pointerEvents = "none";
+    };
+
+    const findHoveredMarker = (clientX, clientY) => {
+      const cfg = config.current;
+      const rect = canvas.getBoundingClientRect();
+      const mx = clientX - rect.left;
+      const my = clientY - rect.top;
+      let best = null;
+      let bestDist = Infinity;
+
+      for (const m of cfg.markers) {
+        const p = projectAt(m.lat, m.lon, rotation.current.x, rotation.current.y);
+        if (p.z > -radius * 0.12) {
+          const dx = p.x - mx;
+          const dy = p.y - my;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const hitRadius = Math.max(m.size ?? 6.8, 10);
+          if (dist < hitRadius && dist < bestDist) {
+            bestDist = dist;
+            best = { marker: m, projected: p };
+          }
+        }
+      }
+
+      return best;
+    };
+
+    const setHovered = (hit) => {
+      const cfg = config.current;
+      const prev = hoveredHit.current?.marker ?? null;
+      const next = hit?.marker ?? null;
+      if (prev === next) return;
+
+      hoveredHit.current = hit;
+      setHoveredMarker(next);
+      if (cfg.onMarkerHover) cfg.onMarkerHover(next);
+
+      clearTimeout(tooltipTimer.current);
+      if (next && cfg.renderTooltip) {
+        tooltipTimer.current = setTimeout(() => setTooltipVisible(true), cfg.tooltipDelay);
+      } else {
+        setTooltipVisible(false);
+      }
+    };
+
+    const getMousePoint = (e) => {
+      const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+      const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+      return { clientX, clientY };
+    };
+
+    const handleMouseDown = (e) => {
+      if (!config.current.interactive) return;
+      isDragging.current = true;
+      previousMouse.current = getMousePoint(e);
+      canvas.style.cursor = "grabbing";
+    };
+
+    const handleMouseMove = (e) => {
+      const cfg = config.current;
+      const { clientX, clientY } = getMousePoint(e);
+
+      if (isDragging.current && cfg.interactive) {
+        rotation.current.y += (clientX - previousMouse.current.clientX) * dragSpeed;
+        previousMouse.current = { clientX, clientY };
+        return;
+      }
+
+      const hasHoverFeatures = cfg.renderTooltip || cfg.onMarkerHover || cfg.onMarkerClick;
+      if (!hasHoverFeatures) return;
+
+      const hit = findHoveredMarker(clientX, clientY);
+      setHovered(hit);
+      canvas.style.cursor = hit ? "pointer" : (cfg.interactive ? "grab" : "default");
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      canvas.style.cursor = config.current.interactive ? "grab" : "default";
+    };
+
+    const handleMouseLeave = () => {
+      isDragging.current = false;
+      setHovered(null);
+      canvas.style.cursor = config.current.interactive ? "grab" : "default";
+    };
+
+    const handleClick = (e) => {
+      const cfg = config.current;
+      if (!cfg.onMarkerClick) return;
+      const { clientX, clientY } = getMousePoint(e);
+      const hit = findHoveredMarker(clientX, clientY);
+      if (hit) cfg.onMarkerClick(hit.marker);
+    };
+
+    canvas.addEventListener("mousedown", handleMouseDown);
+    canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("mouseup", handleMouseUp);
+    canvas.addEventListener("mouseleave", handleMouseLeave);
+    canvas.addEventListener("click", handleClick);
+    canvas.addEventListener("touchstart", handleMouseDown, { passive: true });
+    canvas.addEventListener("touchmove", handleMouseMove, { passive: true });
+    canvas.addEventListener("touchend", handleMouseUp);
+
     const render = () => {
       const cfg = config.current;
       ctx.clearRect(0, 0, width, height);
@@ -137,16 +407,23 @@ export default function LandGlobe({
       ctx.fill();
 
       // Puntos de tierra
-      for (let i = 0; i < landDots.length; i++) {
-        const [lat, lon] = landDots[i];
-        const p = projectAt(lat, lon, rotation.current.x, rotation.current.y);
-        if (p.z > 0) {
-          const alpha = Math.pow(p.z / radius, 1.25) * cfg.dotOpacity;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, 0.95, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${cfg.dotColor}, ${alpha})`;
-          ctx.fill();
+      if (cfg.landStyle === "dots" || cfg.landStyle === "dots+outline") {
+        for (let i = 0; i < landDots.length; i++) {
+          const [lat, lon] = landDots[i];
+          const p = projectAt(lat, lon, rotation.current.x, rotation.current.y);
+          if (p.z > 0) {
+            const alpha = Math.pow(p.z / radius, 1.25) * cfg.dotOpacity;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 0.95, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${cfg.dotColor}, ${alpha})`;
+            ctx.fill();
+          }
         }
+      }
+
+      // Contornos de tierra
+      if (cfg.landStyle === "outline" || cfg.landStyle === "dots+outline") {
+        drawOutlines(rotation.current.x, rotation.current.y);
       }
 
       // Marcadores
@@ -171,8 +448,14 @@ export default function LandGlobe({
           ctx.arc(p.x, p.y, 1.85, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(${cfg.markerCoreColor}, ${depth})`;
           ctx.fill();
+
+          if (cfg.showLabels) {
+            drawLabel(m, p, depth);
+          }
         }
       }
+
+      updateTooltipPosition();
 
       animId = requestAnimationFrame(render);
     };
@@ -182,49 +465,26 @@ export default function LandGlobe({
     return () => {
       cancelAnimationFrame(animId);
       observer?.disconnect();
+      clearTimeout(tooltipTimer.current);
+      canvas.removeEventListener("mousedown", handleMouseDown);
+      canvas.removeEventListener("mousemove", handleMouseMove);
+      canvas.removeEventListener("mouseup", handleMouseUp);
+      canvas.removeEventListener("mouseleave", handleMouseLeave);
+      canvas.removeEventListener("click", handleClick);
+      canvas.removeEventListener("touchstart", handleMouseDown);
+      canvas.removeEventListener("touchmove", handleMouseMove);
+      canvas.removeEventListener("touchend", handleMouseUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Controles de arrastre (mouse + touch): solo rotación horizontal.
-  const getX = (e) => e.clientX ?? e.touches?.[0]?.clientX ?? 0;
-  const getY = (e) => e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-
-  const handleDown = (e) => {
-    isDragging.current = true;
-    previousMouse.current = { x: getX(e), y: getY(e) };
-    if (e.currentTarget) e.currentTarget.style.cursor = "grabbing";
-  };
-
-  const handleMove = (e) => {
-    if (!isDragging.current) return;
-    const clientX = getX(e);
-    rotation.current.y += (clientX - previousMouse.current.x) * dragSpeed;
-    previousMouse.current = { x: clientX, y: getY(e) };
-  };
-
-  const handleUp = (e) => {
-    isDragging.current = false;
-    if (e?.currentTarget) e.currentTarget.style.cursor = "grab";
-  };
-
-  const dragHandlers = interactive
-    ? {
-        onMouseDown: handleDown,
-        onMouseMove: handleMove,
-        onMouseUp: handleUp,
-        onMouseLeave: handleUp,
-        onTouchStart: handleDown,
-        onTouchMove: handleMove,
-        onTouchEnd: handleUp,
-      }
-    : {};
-
   return React.createElement(
     "div",
     {
+      ref: wrapperRef,
       className,
       style: {
+        position: style?.position ?? "relative",
         width: "100%",
         maxWidth: size,
         aspectRatio: "1 / 1",
@@ -242,7 +502,25 @@ export default function LandGlobe({
         userSelect: "none",
         touchAction: "none",
       },
-      ...dragHandlers,
     }),
+    renderTooltip && hoveredMarker
+      ? React.createElement(
+          "div",
+          {
+            ref: tooltipRef,
+            style: {
+              position: "absolute",
+              left: 0,
+              top: 0,
+              opacity: 0,
+              transform: "translate(0, 0)",
+              transition: "opacity 150ms ease",
+              pointerEvents: "none",
+              zIndex: 10,
+            },
+          },
+          renderTooltip(hoveredMarker),
+        )
+      : null,
   );
 }
