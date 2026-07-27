@@ -14,7 +14,8 @@
   "files": [
     "src",
     "scripts",
-    "data"
+    "data",
+    "docs"
   ],
   "sideEffects": false,
   "scripts": {
